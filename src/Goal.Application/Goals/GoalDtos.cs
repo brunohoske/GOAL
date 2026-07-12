@@ -33,4 +33,5 @@ public record GoalDetailDto(
     string TimeZone,
     GoalSettingsDto Settings,
     Guid? CurrentSprintId,
-    int? CurrentSprintNumber);
+    int? CurrentSprintNumber,
+    DateTimeOffset? CurrentSprintEndsAt);

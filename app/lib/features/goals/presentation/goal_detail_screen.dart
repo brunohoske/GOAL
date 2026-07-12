@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../design_system/components/empty_state.dart';
 import '../../../design_system/components/goal_progress_ring.dart';
@@ -28,7 +29,12 @@ class GoalDetailScreen extends ConsumerWidget {
     return detailAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/home'),
+          ),
+        ),
         body: EmptyState(
           icon: Icons.cloud_off,
           title: 'Não foi possível carregar',
@@ -47,6 +53,11 @@ class GoalDetailScreen extends ConsumerWidget {
           length: 5,
           child: Scaffold(
             appBar: AppBar(
+              // Always show a way home: after create/join the stack may have nothing to pop.
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.canPop() ? context.pop() : context.go('/home'),
+              ),
               title: Text(goal.title, overflow: TextOverflow.ellipsis),
               actions: [
                 IconButton(
@@ -355,7 +366,8 @@ class _SprintTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blockingAsync = ref.watch(blockingStateProvider(goalId));
-    final joinCode = ref.watch(goalDetailProvider(goalId)).valueOrNull?.joinCode ?? '';
+    final detail = ref.watch(goalDetailProvider(goalId)).valueOrNull;
+    final joinCode = detail?.joinCode ?? '';
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(blockingStateProvider(goalId)),
       child: ListView(
@@ -364,7 +376,7 @@ class _SprintTab extends ConsumerWidget {
           blockingAsync.when(
             loading: () => const _CardSkeleton(),
             error: (_, __) => const SizedBox.shrink(),
-            data: (bs) => _BlockingCard(state: bs),
+            data: (bs) => _BlockingCard(state: bs, sprintEndsAt: detail?.currentSprintEndsAt),
           ),
           if (joinCode.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
@@ -398,8 +410,9 @@ class _SprintTab extends ConsumerWidget {
 }
 
 class _BlockingCard extends StatelessWidget {
-  const _BlockingCard({required this.state});
+  const _BlockingCard({required this.state, this.sprintEndsAt});
   final dynamic state;
+  final DateTime? sprintEndsAt;
 
   @override
   Widget build(BuildContext context) {
@@ -442,6 +455,13 @@ class _BlockingCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text('${state.daysRemaining} dias restantes',
                           style: Theme.of(context).textTheme.bodySmall),
+                      if (sprintEndsAt != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Nova sprint: ${DateFormat("dd/MM 'às' HH:mm").format(sprintEndsAt!)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [

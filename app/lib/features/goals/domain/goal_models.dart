@@ -107,6 +107,7 @@ class GoalDetail {
     required this.settings,
     this.currentSprintId,
     this.currentSprintNumber,
+    this.currentSprintEndsAt,
   });
 
   final String id;
@@ -118,6 +119,7 @@ class GoalDetail {
   final GoalSettings settings;
   final String? currentSprintId;
   final int? currentSprintNumber;
+  final DateTime? currentSprintEndsAt;
 
   factory GoalDetail.fromJson(Map<String, dynamic> j) => GoalDetail(
         id: j['id'],
@@ -129,5 +131,8 @@ class GoalDetail {
         settings: GoalSettings.fromJson(j['settings']),
         currentSprintId: j['currentSprintId'],
         currentSprintNumber: j['currentSprintNumber'],
+        currentSprintEndsAt: j['currentSprintEndsAt'] == null
+            ? null
+            : DateTime.parse(j['currentSprintEndsAt']).toLocal(),
       );
 }

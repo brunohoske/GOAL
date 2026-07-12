@@ -80,8 +80,14 @@ public class GetGoalHandler : IRequestHandler<GetGoalQuery, Result<GoalDetailDto
         if (goal is null) return Error.NotFound("Goal not found.");
 
         int? sprintNumber = null;
+        DateTimeOffset? sprintEndsAt = null;
         if (goal.CurrentSprintId is Guid sid)
-            sprintNumber = await _db.Sprints.Where(s => s.Id == sid).Select(s => (int?)s.SequenceNumber).FirstOrDefaultAsync(ct);
+        {
+            var sp = await _db.Sprints.Where(s => s.Id == sid)
+                .Select(s => new { s.SequenceNumber, s.EndAt }).FirstOrDefaultAsync(ct);
+            sprintNumber = sp?.SequenceNumber;
+            sprintEndsAt = sp?.EndAt;
+        }
 
         var s = goal.Settings;
         var dto = new GoalDetailDto(
@@ -92,7 +98,8 @@ public class GetGoalHandler : IRequestHandler<GetGoalQuery, Result<GoalDetailDto
                 s.DebtCarryEnabled, s.XpScalableEasy, s.XpScalableMedium, s.XpScalableHard,
                 s.BlockedApps.Select(a => new BlockedAppDto(a.PackageName, a.DisplayName)).ToList()),
             goal.CurrentSprintId,
-            sprintNumber);
+            sprintNumber,
+            sprintEndsAt);
 
         return Result.Success(dto);
     }

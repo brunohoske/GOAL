@@ -21,6 +21,13 @@ public enum XpMode
 
 public enum Difficulty { Easy = 0, Medium = 1, Hard = 2 }
 
+/// <summary>
+/// Approval lifecycle of a catalog task. Admin-created tasks are born Approved; tasks
+/// proposed by regular members stay Pending until the admin approves (optionally after
+/// adjusting any field) or rejects them. Approved = 0 so pre-existing rows stay valid.
+/// </summary>
+public enum TaskApprovalStatus { Approved = 0, Pending = 1, Rejected = 2 }
+
 public enum SprintStatus { Active = 0, Closing = 1, Closed = 2 }
 
 public enum AssignmentType { SelfAssigned = 0, AdminAssigned = 1 }
@@ -64,7 +71,10 @@ public enum NotificationType
     CompletionRejected = 3,
     SprintEndingSoon = 4,
     BlockedReminder = 5,
-    DebtWarning = 6
+    DebtWarning = 6,
+    TaskProposed = 7,
+    TaskApproved = 8,
+    TaskRejected = 9
 }
 
 public enum NotificationStatus { Pending = 0, Sent = 1, Read = 2, Failed = 3 }

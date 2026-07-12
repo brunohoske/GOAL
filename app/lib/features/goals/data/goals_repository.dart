@@ -35,6 +35,10 @@ class GoalsRepository {
     return r.data as String;
   }
 
+  /// Admin resolves a member-proposed task: approve (body may adjust any field) or reject.
+  Future<void> reviewTask(String goalId, String taskId, Map<String, dynamic> body) =>
+      _dio.post('/goals/$goalId/tasks/$taskId/review', data: body);
+
   Future<String> createInvite(String goalId, String email) async {
     final r = await _dio.post('/goals/$goalId/invites', data: {'email': email});
     return r.data as String;

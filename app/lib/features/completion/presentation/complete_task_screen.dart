@@ -133,7 +133,11 @@ class _State extends ConsumerState<CompleteTaskScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Concluir tarefa')),
-      body: ListView(
+      // SafeArea: explicit list padding disables automatic system-inset handling,
+      // so without this the submit button hides behind the Android nav bar.
+      body: SafeArea(
+        top: false,
+        child: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Text(widget.taskTitle, style: Theme.of(context).textTheme.headlineSmall),
@@ -198,6 +202,7 @@ class _State extends ConsumerState<CompleteTaskScreen> {
                 : const Text('Enviar para aprovação'),
           ),
         ],
+        ),
       ),
     );
   }

@@ -4,8 +4,9 @@ using Goal.Domain.Goals;
 namespace Goal.Domain.Tasks;
 
 /// <summary>
-/// A task in a Goal's catalog. Only the admin creates these. It is a *template* —
-/// the actual per-sprint instance a member works on is a SprintTaskAssignment.
+/// A task in a Goal's catalog. Admin-created tasks are immediately available; tasks
+/// proposed by regular members wait as Pending until the admin approves them. It is a
+/// *template* — the actual per-sprint instance a member works on is a SprintTaskAssignment.
 /// </summary>
 public class TaskDefinition : Entity
 {
@@ -29,6 +30,7 @@ public class TaskDefinition : Entity
     public bool HasChecklist { get; set; }
 
     public bool IsActive { get; set; } = true;
+    public TaskApprovalStatus ApprovalStatus { get; set; } = TaskApprovalStatus.Approved;
     public Guid CreatedByUserId { get; set; }
 
     public ICollection<ChecklistItemTemplate> ChecklistItems { get; set; } = new List<ChecklistItemTemplate>();

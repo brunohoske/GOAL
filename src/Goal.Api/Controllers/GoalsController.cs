@@ -46,6 +46,14 @@ public class GoalsController : ApiControllerBase
     public async Task<IActionResult> CreateTask(Guid goalId, CreateTaskDefinitionBody body)
         => ToCreated(await Mediator.Send(body.ToCommand(goalId)));
 
+    /// <summary>Admin resolves a member-proposed task: approve (with optional field adjustments) or reject.</summary>
+    [HttpPost("{goalId:guid}/tasks/{taskId:guid}/review")]
+    public async Task<IActionResult> ReviewTask(Guid goalId, Guid taskId, ReviewTaskBody body)
+        => ToResult(await Mediator.Send(new ReviewTaskDefinitionCommand(
+            goalId, taskId, body.Approve, body.Title, body.Description, body.XpMode, body.ManualXp,
+            body.Difficulty, body.OnTimeBonusXp, body.StreakBonusXp, body.RequiresImage,
+            body.RequiresAttachment, body.HasChecklist, body.ChecklistItems)));
+
     [HttpGet("{goalId:guid}/members")]
     public async Task<IActionResult> ListMembers(Guid goalId)
         => ToResult(await Mediator.Send(new ListMembersQuery(goalId)));
@@ -78,6 +86,21 @@ public record UpdateGoalBody(
     bool? TypingSabotageEnabled,
     int? TypingSabotageDaysBefore,
     string? TypingSabotageText);
+
+/// <summary>Body for reviewing a proposed task (ids come from the route). Null fields keep the proposal's values.</summary>
+public record ReviewTaskBody(
+    bool Approve,
+    string? Title,
+    string? Description,
+    Domain.Common.XpMode? XpMode,
+    int? ManualXp,
+    Domain.Common.Difficulty? Difficulty,
+    int? OnTimeBonusXp,
+    int? StreakBonusXp,
+    bool? RequiresImage,
+    bool? RequiresAttachment,
+    bool? HasChecklist,
+    List<ChecklistItemInput>? ChecklistItems);
 
 /// <summary>Body for creating a task (goalId comes from the route).</summary>
 public record CreateTaskDefinitionBody(

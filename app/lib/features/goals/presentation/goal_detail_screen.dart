@@ -95,16 +95,21 @@ class GoalDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            body: TabBarView(
-              children: [
-                _SprintTab(goalId: goalId),
-                _TasksTab(goalId: goalId, sprintId: sprintId, isAdmin: isAdmin, members: members),
-                _TeamTab(goalId: goalId, sprintId: sprintId),
-                _RankingTab(goalId: goalId),
-                _ReviewTab(goalId: goalId),
-              ],
+            // SafeArea: the tab lists use explicit padding, which disables the automatic
+            // system-inset padding — without this, content hides behind the Android nav bar.
+            body: SafeArea(
+              top: false,
+              child: TabBarView(
+                children: [
+                  _SprintTab(goalId: goalId),
+                  _TasksTab(goalId: goalId, sprintId: sprintId, isAdmin: isAdmin, members: members),
+                  _TeamTab(goalId: goalId, sprintId: sprintId),
+                  _RankingTab(goalId: goalId),
+                  _ReviewTab(goalId: goalId),
+                ],
+              ),
             ),
-            floatingActionButton: _Fab(goalId: goalId, sprintId: sprintId),
+            floatingActionButton: _Fab(goalId: goalId, sprintId: sprintId, isAdmin: isAdmin),
           ),
         );
       },
@@ -397,9 +402,10 @@ class _EditStepper extends StatelessWidget {
 
 /// Context-aware FAB: only on the Tarefas tab (admin creates tasks).
 class _Fab extends StatelessWidget {
-  const _Fab({required this.goalId, required this.sprintId});
+  const _Fab({required this.goalId, required this.sprintId, required this.isAdmin});
   final String goalId;
   final String? sprintId;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -409,9 +415,10 @@ class _Fab extends StatelessWidget {
       builder: (context, _) {
         if (tab.index != 1) return const SizedBox.shrink();
         return FloatingActionButton.extended(
-          onPressed: () => context.push('/goals/$goalId/tasks/create'),
+          onPressed: () =>
+              context.push('/goals/$goalId/tasks/create', extra: {'isAdmin': isAdmin}),
           icon: const Icon(Icons.add_task),
-          label: const Text('Nova tarefa'),
+          label: Text(isAdmin ? 'Nova tarefa' : 'Sugerir tarefa'),
         );
       },
     );
@@ -699,23 +706,41 @@ class _CatalogTaskTileState extends ConsumerState<_CatalogTaskTile> {
                       if (task.hasChecklist) const _ReqDot(label: 'checklist'),
                     ],
                   ),
+                  if (task.isPending) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    StatusChip.pending(task.proposedByMe
+                        ? 'Aguardando aprovação do admin'
+                        : 'Sugerida por ${task.proposedByName ?? "membro"} · aguardando'),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            if (isAdmin)
-              IconButton(
-                icon: const Icon(Icons.assignment_ind_outlined, color: AppColors.primary),
-                tooltip: 'Atribuir a um membro',
-                onPressed: _assigning ? null : () => _pickMember(context),
+            if (task.isPending)
+              // Pending proposals can't be picked up; the admin reviews (and may adjust) them.
+              if (isAdmin)
+                FilledButton.tonal(
+                  onPressed: () => context.push('/goals/$goalId/tasks/create',
+                      extra: {'isAdmin': true, 'review': task}),
+                  child: const Text('Revisar'),
+                )
+              else
+                const SizedBox.shrink()
+            else ...[
+              if (isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.assignment_ind_outlined, color: AppColors.primary),
+                  tooltip: 'Atribuir a um membro',
+                  onPressed: _assigning ? null : () => _pickMember(context),
+                ),
+              OutlinedButton(
+                onPressed: _assigning ? null : () => _assign(null),
+                child: _assigning
+                    ? const SizedBox(
+                        width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Pegar'),
               ),
-            OutlinedButton(
-              onPressed: _assigning ? null : () => _assign(null),
-              child: _assigning
-                  ? const SizedBox(
-                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Pegar'),
-            ),
+            ],
           ],
         ),
       ),

@@ -53,7 +53,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'tasks/create',
-            builder: (_, s) => CreateTaskScreen(goalId: s.pathParameters['goalId']!),
+            builder: (_, s) {
+              final extra = (s.extra as Map<String, dynamic>?) ?? const {};
+              return CreateTaskScreen(
+                goalId: s.pathParameters['goalId']!,
+                isAdmin: extra['isAdmin'] as bool? ?? true,
+                review: extra['review'] as TaskDef?,
+              );
+            },
           ),
           GoRoute(
             path: 'complete/:assignmentId',

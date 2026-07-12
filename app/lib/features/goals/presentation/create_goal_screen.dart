@@ -107,7 +107,11 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const GoalBrandedLabel(prefix: 'Novo', fontSize: 20)),
-      body: ListView(
+      // SafeArea: explicit list padding disables automatic system-inset handling,
+      // so without this the create button hides behind the Android nav bar.
+      body: SafeArea(
+        top: false,
+        child: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           _Section(
@@ -280,6 +284,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
         ],
+        ),
       ),
     );
   }

@@ -40,6 +40,8 @@ public class AssignTaskHandler : IRequestHandler<AssignTaskCommand, Result<Guid>
         var task = await _db.TaskDefinitions
             .FirstOrDefaultAsync(t => t.Id == cmd.TaskDefinitionId && t.GoalId == sprint.GoalId && t.IsActive, ct);
         if (task is null) return Error.NotFound("Task not found in this goal.");
+        if (task.ApprovalStatus != TaskApprovalStatus.Approved)
+            return Error.Validation("This task is still awaiting admin approval.");
 
         Guid assigneeMemberId;
         AssignmentType type;

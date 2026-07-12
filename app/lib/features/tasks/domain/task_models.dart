@@ -24,6 +24,9 @@ class ChecklistItem {
       {'id': id, 'label': label, 'isRequired': isRequired, 'orderIndex': orderIndex};
 }
 
+/// Mirrors the backend TaskApprovalStatus enum order.
+enum TaskApprovalStatus { approved, pending, rejected }
+
 class TaskDef {
   const TaskDef({
     required this.id,
@@ -35,6 +38,12 @@ class TaskDef {
     required this.requiresAttachment,
     required this.hasChecklist,
     this.checklistItems = const [],
+    this.approvalStatus = TaskApprovalStatus.approved,
+    this.proposedByName,
+    this.proposedByMe = false,
+    this.xpMode = 1,
+    this.manualXp,
+    this.difficulty,
   });
 
   final String id;
@@ -46,6 +55,18 @@ class TaskDef {
   final bool requiresAttachment;
   final bool hasChecklist;
   final List<ChecklistItem> checklistItems;
+
+  /// Member-proposed tasks wait for the admin's decision before being assignable.
+  final TaskApprovalStatus approvalStatus;
+  final String? proposedByName;
+  final bool proposedByMe;
+
+  /// XP source fields (mirror backend): 0 = manual, 1 = scalable by difficulty.
+  final int xpMode;
+  final int? manualXp;
+  final int? difficulty;
+
+  bool get isPending => approvalStatus == TaskApprovalStatus.pending;
 
   factory TaskDef.fromJson(Map<String, dynamic> j) => TaskDef(
         id: j['id'],
@@ -59,6 +80,12 @@ class TaskDef {
         checklistItems: ((j['checklistItems'] as List?) ?? const [])
             .map((e) => ChecklistItem.fromJson(e))
             .toList(),
+        approvalStatus: TaskApprovalStatus.values[(j['approvalStatus'] as int?) ?? 0],
+        proposedByName: j['proposedByName'],
+        proposedByMe: (j['proposedByMe'] as bool?) ?? false,
+        xpMode: (j['xpMode'] as int?) ?? 1,
+        manualXp: j['manualXp'],
+        difficulty: j['difficulty'],
       );
 }
 

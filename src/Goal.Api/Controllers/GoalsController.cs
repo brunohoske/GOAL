@@ -43,9 +43,15 @@ public class GoalsController : ApiControllerBase
     [HttpPost("{goalId:guid}/invites")]
     public async Task<IActionResult> Invite(Guid goalId, InviteBody body)
         => ToResult(await Mediator.Send(new CreateInviteCommand(goalId, body.Email)));
+
+    /// <summary>Joins a goal via its shareable code; returns the goal id.</summary>
+    [HttpPost("join")]
+    public async Task<IActionResult> Join(JoinBody body)
+        => ToResult(await Mediator.Send(new JoinByCodeCommand(body.Code)));
 }
 
 public record InviteBody(string Email);
+public record JoinBody(string Code);
 
 /// <summary>Body for creating a task (goalId comes from the route).</summary>
 public record CreateTaskDefinitionBody(

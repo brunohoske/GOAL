@@ -85,7 +85,7 @@ public class GetGoalHandler : IRequestHandler<GetGoalQuery, Result<GoalDetailDto
 
         var s = goal.Settings;
         var dto = new GoalDetailDto(
-            goal.Id, goal.Title, goal.Description, goal.AdminUserId, goal.TimeZone,
+            goal.Id, goal.Title, goal.Description, goal.JoinCode, goal.AdminUserId, goal.TimeZone,
             new GoalSettingsDto(
                 s.SprintDurationDays, s.BaseXpTargetPerSprint, s.UnblockThresholdPct,
                 s.FinalTriggerDaysBefore, s.FinalTriggerTargetPct, s.VoteApprovalThreshold,

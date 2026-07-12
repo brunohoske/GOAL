@@ -13,6 +13,9 @@ public class GoalAggregate : Entity
     public string Title { get; set; } = default!;
     public string? Description { get; set; }
 
+    /// <summary>Short shareable code friends type to join this goal (unique, e.g. "K7M2XQ").</summary>
+    public string JoinCode { get; set; } = default!;
+
     public Guid AdminUserId { get; set; }
     public User? Admin { get; set; }
 

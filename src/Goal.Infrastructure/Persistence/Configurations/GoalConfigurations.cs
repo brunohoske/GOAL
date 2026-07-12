@@ -12,6 +12,8 @@ public class GoalConfiguration : IEntityTypeConfiguration<GoalAggregate>
         e.HasKey(x => x.Id);
         e.Property(x => x.Title).IsRequired();
         e.Property(x => x.TimeZone).IsRequired();
+        e.Property(x => x.JoinCode).IsRequired().HasMaxLength(12);
+        e.HasIndex(x => x.JoinCode).IsUnique();
         e.HasIndex(x => x.AdminUserId);
 
         e.HasOne(x => x.Admin).WithMany().HasForeignKey(x => x.AdminUserId).OnDelete(DeleteBehavior.Restrict);

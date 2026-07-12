@@ -23,6 +23,11 @@ class HomeScreen extends ConsumerWidget {
         title: const GoalWordmark(fontSize: 24),
         actions: [
           IconButton(
+            icon: const Icon(Icons.vpn_key_outlined),
+            tooltip: 'Entrar com código',
+            onPressed: () => _joinWithCode(context, ref),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
@@ -49,10 +54,15 @@ class HomeScreen extends ConsumerWidget {
           ),
           data: (goals) {
             if (goals.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.flag_outlined,
                 title: 'Nenhum GOAL ainda',
-                message: 'Crie um GOAL e convide seus amigos para começar.',
+                message: 'Crie um GOAL e convide seus amigos — ou entre num GOAL existente com o código.',
+                action: OutlinedButton.icon(
+                  onPressed: () => _joinWithCode(context, ref),
+                  icon: const Icon(Icons.vpn_key_outlined, size: 18),
+                  label: const Text('Entrar com código'),
+                ),
               );
             }
             return ListView.separated(
@@ -65,6 +75,61 @@ class HomeScreen extends ConsumerWidget {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Bottom sheet: type a friend's GOAL code to join it.
+  void _joinWithCode(BuildContext context, WidgetRef ref) {
+    final codeCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl,
+            MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Entrar num GOAL', style: Theme.of(ctx).textTheme.headlineSmall),
+            const SizedBox(height: AppSpacing.sm),
+            Text('Peça o código para quem criou o GOAL — ele aparece na tela do GOAL.',
+                style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.lg),
+            TextField(
+              controller: codeCtrl,
+              textCapitalization: TextCapitalization.characters,
+              autofocus: true,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: 4),
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(hintText: 'EX: K7M2XQ'),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton(
+              onPressed: () async {
+                final code = codeCtrl.text.trim();
+                if (code.isEmpty) return;
+                try {
+                  final goalId = await ref.read(goalsRepositoryProvider).joinByCode(code);
+                  ref.invalidate(goalsListProvider);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) context.push('/goals/$goalId');
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('Código inválido ou você já participa desse GOAL.')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Entrar'),
+            ),
+          ],
         ),
       ),
     );

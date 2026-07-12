@@ -40,6 +40,12 @@ class GoalsRepository {
     return r.data as String;
   }
 
+  /// Joins a goal by its shareable code; returns the goal id.
+  Future<String> joinByCode(String code) async {
+    final r = await _dio.post('/goals/join', data: {'code': code.trim().toUpperCase()});
+    return r.data as String;
+  }
+
   Future<String> assignTask(String sprintId, String taskDefinitionId, {String? targetMemberId}) async {
     final r = await _dio.post('/sprints/$sprintId/assignments', data: {
       'taskDefinitionId': taskDefinitionId,

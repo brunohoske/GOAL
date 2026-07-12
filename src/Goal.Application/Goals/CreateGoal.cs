@@ -64,6 +64,7 @@ public class CreateGoalHandler : IRequestHandler<CreateGoalCommand, Result<Guid>
         {
             Title = cmd.Title,
             Description = cmd.Description,
+            JoinCode = await GenerateUniqueJoinCodeAsync(ct),
             AdminUserId = adminUserId,
             TimeZone = cmd.TimeZone,
             Status = GoalStatus.Active
@@ -127,5 +128,21 @@ public class CreateGoalHandler : IRequestHandler<CreateGoalCommand, Result<Guid>
     {
         try { tz = TimeZoneInfo.FindSystemTimeZoneById(id); return true; }
         catch { tz = TimeZoneInfo.Utc; return false; }
+    }
+
+    // Unambiguous alphabet (no 0/O, 1/I/L) so codes are easy to read aloud and type.
+    private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    private async Task<string> GenerateUniqueJoinCodeAsync(CancellationToken ct)
+    {
+        while (true)
+        {
+            var code = new string(Enumerable.Range(0, 6)
+                .Select(_ => CodeAlphabet[System.Security.Cryptography.RandomNumberGenerator.GetInt32(CodeAlphabet.Length)])
+                .ToArray());
+            if (!await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
+                    .AnyAsync(_db.Goals, g => g.JoinCode == code, ct))
+                return code;
+        }
     }
 }

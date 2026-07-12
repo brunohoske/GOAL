@@ -101,6 +101,7 @@ class GoalDetail {
     required this.id,
     required this.title,
     this.description,
+    required this.joinCode,
     required this.adminUserId,
     required this.timeZone,
     required this.settings,
@@ -111,6 +112,7 @@ class GoalDetail {
   final String id;
   final String title;
   final String? description;
+  final String joinCode;
   final String adminUserId;
   final String timeZone;
   final GoalSettings settings;
@@ -121,6 +123,7 @@ class GoalDetail {
         id: j['id'],
         title: j['title'],
         description: j['description'],
+        joinCode: (j['joinCode'] as String?) ?? '',
         adminUserId: j['adminUserId'],
         timeZone: j['timeZone'],
         settings: GoalSettings.fromJson(j['settings']),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -51,7 +52,7 @@ class GoalDetailScreen extends ConsumerWidget {
                 IconButton(
                   icon: const Icon(Icons.person_add_outlined),
                   tooltip: 'Convidar',
-                  onPressed: () => _showInvite(context, ref),
+                  onPressed: () => _showInvite(context, goal.joinCode),
                 ),
               ],
               bottom: const TabBar(
@@ -84,38 +85,58 @@ class GoalDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showInvite(BuildContext context, WidgetRef ref) {
-    final emailCtrl = TextEditingController();
+  /// Invite = share the goal's join code. Friends type it in "Entrar com código" on Home.
+  void _showInvite(BuildContext context, String joinCode) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl,
-            MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Convidar amigo', style: Theme.of(ctx).textTheme.headlineSmall),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'E-mail do amigo')),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: () async {
-                final token = await ref.read(goalsRepositoryProvider).createInvite(goalId, emailCtrl.text.trim());
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Convite criado. Código: $token')),
-                  );
-                }
-              },
-              child: const Text('Gerar convite'),
-            ),
-          ],
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Convidar amigos', style: Theme.of(ctx).textTheme.headlineSmall),
+              const SizedBox(height: AppSpacing.sm),
+              Text('Compartilhe este código. No app, o amigo toca em "Entrar com código" na tela inicial.',
+                  style: Theme.of(ctx).textTheme.bodySmall),
+              const SizedBox(height: AppSpacing.xl),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Text(
+                  joinCode,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 8,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: joinCode));
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Código copiado!')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Copiar código'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -153,6 +174,7 @@ class _SprintTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blockingAsync = ref.watch(blockingStateProvider(goalId));
+    final joinCode = ref.watch(goalDetailProvider(goalId)).valueOrNull?.joinCode ?? '';
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(blockingStateProvider(goalId)),
       child: ListView(
@@ -163,6 +185,31 @@ class _SprintTab extends ConsumerWidget {
             error: (_, __) => const SizedBox.shrink(),
             data: (bs) => _BlockingCard(state: bs),
           ),
+          if (joinCode.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                leading: const Icon(Icons.vpn_key_outlined, color: AppColors.primary),
+                title: const Text('Código do GOAL', style: TextStyle(fontSize: 13)),
+                subtitle: Text(joinCode,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 4, color: AppColors.onSurface)),
+                trailing: IconButton(
+                  icon: const Icon(Icons.copy, size: 20),
+                  tooltip: 'Copiar',
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: joinCode));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Código copiado! Compartilhe com seus amigos.')),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

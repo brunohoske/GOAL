@@ -28,6 +28,7 @@ public record GoalDetailDto(
     Guid Id,
     string Title,
     string? Description,
+    string JoinCode,
     Guid AdminUserId,
     string TimeZone,
     GoalSettingsDto Settings,

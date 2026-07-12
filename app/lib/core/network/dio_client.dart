@@ -5,6 +5,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../config/env.dart';
 import '../storage/secure_storage.dart';
 import 'auth_interceptor.dart';
+import 'retry_interceptor.dart';
 
 /// Configured Dio instance: base URL, JSON, auth + refresh interceptors, logging.
 final dioProvider = Provider<Dio>((ref) {
@@ -19,6 +20,7 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(AuthInterceptor(dio: dio, storage: storage, onSignedOut: () {
     ref.read(authSignedOutProvider.notifier).state = true;
   }));
+  dio.interceptors.add(RetryInterceptor(dio));
   dio.interceptors.add(PrettyDioLogger(requestBody: true, responseBody: false, compact: true));
 
   return dio;

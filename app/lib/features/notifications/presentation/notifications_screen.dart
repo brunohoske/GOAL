@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../design_system/components/empty_state.dart';
+import '../../../design_system/components/error_state.dart';
 import '../../../design_system/theme/app_colors.dart';
 import '../../../design_system/theme/app_spacing.dart';
 import '../data/notifications_repository.dart';
@@ -33,7 +34,10 @@ class NotificationsScreen extends ConsumerWidget {
         onRefresh: () async => ref.invalidate(notificationsProvider),
         child: itemsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Erro: $e')),
+          error: (e, _) => ErrorState(
+            error: e,
+            onRetry: () => ref.invalidate(notificationsProvider),
+          ),
           data: (items) {
             if (items.isEmpty) {
               return const EmptyState(

@@ -59,6 +59,18 @@ public class AssignTaskHandler : IRequestHandler<AssignTaskCommand, Result<Guid>
             type = AssignmentType.SelfAssigned;
         }
 
+        // Idempotency guard: repeated taps (or retried requests) must not stack duplicate
+        // assignments. If this member already holds an open assignment for the same task in
+        // this sprint, return it instead of creating another one.
+        var existing = await _db.SprintTaskAssignments.FirstOrDefaultAsync(a =>
+            a.SprintId == sprint.Id
+            && a.TaskDefinitionId == task.Id
+            && a.AssignedToGoalMemberId == assigneeMemberId
+            && (a.Status == AssignmentStatus.Open
+                || a.Status == AssignmentStatus.InProgress
+                || a.Status == AssignmentStatus.PendingReview), ct);
+        if (existing is not null) return Result.Success(existing.Id);
+
         var assignment = new SprintTaskAssignment
         {
             SprintId = sprint.Id,

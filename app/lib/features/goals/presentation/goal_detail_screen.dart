@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../design_system/components/empty_state.dart';
+import '../../../design_system/components/error_state.dart';
 import '../../../design_system/components/goal_progress_ring.dart';
 import '../../../design_system/components/status_chip.dart';
 import '../../../design_system/theme/app_colors.dart';
@@ -596,7 +597,13 @@ class _TasksTab extends ConsumerWidget {
       },
       child: tasksAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () {
+            ref.invalidate(tasksProvider(goalId));
+            ref.invalidate(assignmentsProvider(sprintId!));
+          },
+        ),
         data: (tasks) {
           final assignments = assignmentsAsync.valueOrNull ?? const [];
           final taskById = {for (final t in tasks) t.id: t};
@@ -641,7 +648,7 @@ class _TasksTab extends ConsumerWidget {
 }
 
 /// A catalog task with a "Pegar" (self-assign) button; admins can also assign to a member.
-class _CatalogTaskTile extends ConsumerWidget {
+class _CatalogTaskTile extends ConsumerStatefulWidget {
   const _CatalogTaskTile({
     required this.goalId,
     required this.sprintId,
@@ -656,7 +663,22 @@ class _CatalogTaskTile extends ConsumerWidget {
   final List<Member> members;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CatalogTaskTile> createState() => _CatalogTaskTileState();
+}
+
+class _CatalogTaskTileState extends ConsumerState<_CatalogTaskTile> {
+  String get goalId => widget.goalId;
+  String get sprintId => widget.sprintId;
+  TaskDef get task => widget.task;
+  bool get isAdmin => widget.isAdmin;
+  List<Member> get members => widget.members;
+
+  /// Guards against double taps: while a request is in flight the buttons are
+  /// disabled, so queued-up taps can't create a pile of duplicate assignments.
+  bool _assigning = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Padding(
@@ -685,11 +707,14 @@ class _CatalogTaskTile extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.assignment_ind_outlined, color: AppColors.primary),
                 tooltip: 'Atribuir a um membro',
-                onPressed: () => _pickMember(context, ref),
+                onPressed: _assigning ? null : () => _pickMember(context),
               ),
             OutlinedButton(
-              onPressed: () => _assign(context, ref, null),
-              child: const Text('Pegar'),
+              onPressed: _assigning ? null : () => _assign(null),
+              child: _assigning
+                  ? const SizedBox(
+                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Pegar'),
             ),
           ],
         ),
@@ -698,7 +723,7 @@ class _CatalogTaskTile extends ConsumerWidget {
   }
 
   /// Admin: bottom sheet with the member list; picking one assigns the task to them.
-  void _pickMember(BuildContext context, WidgetRef ref) {
+  void _pickMember(BuildContext context) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -723,7 +748,7 @@ class _CatalogTaskTile extends ConsumerWidget {
                   title: Text('${m.displayName}${m.isMe ? " (você)" : ""}'),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _assign(context, ref, m);
+                    _assign(m);
                   },
                 )),
             const SizedBox(height: AppSpacing.md),
@@ -733,17 +758,29 @@ class _CatalogTaskTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _assign(BuildContext context, WidgetRef ref, Member? target) async {
-    await ref
-        .read(goalsRepositoryProvider)
-        .assignTask(sprintId, task.id, targetMemberId: target?.memberId);
-    ref.invalidate(assignmentsProvider(sprintId));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(target == null || target.isMe
-            ? 'Tarefa "${task.title}" atribuída a você.'
-            : 'Tarefa "${task.title}" atribuída a ${target.displayName}.')),
-      );
+  Future<void> _assign(Member? target) async {
+    if (_assigning) return;
+    setState(() => _assigning = true);
+    try {
+      await ref
+          .read(goalsRepositoryProvider)
+          .assignTask(sprintId, task.id, targetMemberId: target?.memberId);
+      ref.invalidate(assignmentsProvider(sprintId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(target == null || target.isMe
+              ? 'Tarefa "${task.title}" atribuída a você.'
+              : 'Tarefa "${task.title}" atribuída a ${target.displayName}.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Não deu para atribuir agora: ${friendlyErrorMessage(e)}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _assigning = false);
     }
   }
 }
@@ -840,7 +877,10 @@ class _RankingTab extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(membersProvider(goalId)),
       child: membersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(membersProvider(goalId)),
+        ),
         data: (members) {
           final ranked = [...members]..sort((a, b) => b.earnedXp.compareTo(a.earnedXp));
           return ListView.separated(
@@ -921,7 +961,13 @@ class _TeamTab extends ConsumerWidget {
       },
       child: membersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () {
+            ref.invalidate(membersProvider(goalId));
+            ref.invalidate(assignmentsProvider(sprintId!));
+          },
+        ),
         data: (members) {
           final unassigned = assignments.where((a) => a.assignedToMemberId == null).toList();
           return ListView(
@@ -1149,7 +1195,10 @@ class _ReviewTab extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(reviewQueueProvider(goalId)),
       child: queueAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
+        error: (e, _) => ErrorState(
+          error: e,
+          onRetry: () => ref.invalidate(reviewQueueProvider(goalId)),
+        ),
         data: (items) {
           if (items.isEmpty) {
             return const EmptyState(

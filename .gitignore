@@ -1,0 +1,28 @@
+# ---- Segredos e config local (NUNCA commitar) ----
+.env
+firebase-credentials.json
+**/google-services.json
+
+# ---- Logs do ambiente de dev ----
+api-dev.log
+api-dev.log.err
+*.log
+
+# ---- .NET ----
+bin/
+obj/
+publish/
+TestResults/
+*.user
+*.suo
+
+# ---- IDEs ----
+.vs/
+.idea/
+*.swp
+
+# ---- Claude Code (config pessoal da máquina) ----
+.claude/settings.local.json
+
+# O app Flutter (app/) tem o proprio .gitignore gerado pelo flutter create,
+# que cobre .dart_tool/, build/, .gradle/, local.properties etc.

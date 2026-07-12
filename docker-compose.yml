@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: goal-postgres
+    environment:
+      POSTGRES_USER: goal
+      POSTGRES_PASSWORD: goal_dev_pwd
+      POSTGRES_DB: goal
+    ports:
+      - "5433:5432"
+    volumes:
+      - goal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goal -d goal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  goal_pgdata:

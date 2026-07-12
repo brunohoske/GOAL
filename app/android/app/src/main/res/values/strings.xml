@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Goal</string>
+    <string name="accessibility_service_description">O Goal usa este serviço para detectar quando você abre um app bloqueado (ou o site dele no navegador) e exibir um lembrete, ajudando você a focar nos seus objetivos. Para isso, apenas o app em primeiro plano e o endereço na barra do navegador são verificados — nada é armazenado ou enviado para fora do aparelho.</string>
+</resources>

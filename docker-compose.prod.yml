@@ -1,0 +1,40 @@
+# Production stack: API + Postgres in one compose. Uploads and DB data persist in volumes.
+# Configure secrets in a .env file next to this file (see .env.example).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: goal
+      POSTGRES_USER: goal
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - goal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goal -d goal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-5080}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: Host=db;Port=5432;Database=goal;Username=goal;Password=${POSTGRES_PASSWORD}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?defina JWT_SIGNING_KEY no .env (32+ caracteres aleatorios)}
+      Storage__LocalRoot: /app/wwwroot/uploads
+      # Optional FCM: mount the service-account json and point to it.
+      # Firebase__CredentialsPath: /app/firebase-credentials.json
+    volumes:
+      - goal_uploads:/app/wwwroot/uploads
+      # - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+
+volumes:
+  goal_pgdata:
+  goal_uploads:

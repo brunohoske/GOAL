@@ -135,18 +135,22 @@ class GoalDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
       ),
       builder: (ctx) => StatefulBuilder(
+        // Scrollable + height-capped so a long "chaos mode" form never pushes Salvar off-screen.
         builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl,
-              MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Editar GOAL', style: Theme.of(ctx).textTheme.headlineSmall),
-              const SizedBox(height: AppSpacing.lg),
-              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Nome')),
-              const SizedBox(height: AppSpacing.lg),
-              _EditStepper(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.85),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Editar GOAL', style: Theme.of(ctx).textTheme.headlineSmall),
+                  const SizedBox(height: AppSpacing.lg),
+                  TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Nome')),
+                  const SizedBox(height: AppSpacing.lg),
+                  _EditStepper(
                 label: 'Duração da sprint',
                 hint: 'vale a partir da PRÓXIMA sprint',
                 value: '$sprintDays dias',
@@ -244,11 +248,13 @@ class GoalDetailScreen extends ConsumerWidget {
                           }
                         }
                       },
-                child: saving
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Salvar'),
+                    child: saving
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Salvar'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

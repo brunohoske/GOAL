@@ -46,6 +46,13 @@ class GoalsRepository {
     return r.data as String;
   }
 
+  /// Admin-only: edits the mutable fields (title, sprint duration, XP target/table).
+  Future<void> updateGoal(String goalId, Map<String, dynamic> body) =>
+      _dio.patch('/goals/$goalId', data: body);
+
+  /// Admin-only: archives the goal (members are released automatically).
+  Future<void> deleteGoal(String goalId) => _dio.delete('/goals/$goalId');
+
   Future<String> assignTask(String sprintId, String taskDefinitionId, {String? targetMemberId}) async {
     final r = await _dio.post('/sprints/$sprintId/assignments', data: {
       'taskDefinitionId': taskDefinitionId,

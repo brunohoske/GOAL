@@ -54,6 +54,20 @@ class GoalDetailScreen extends ConsumerWidget {
                   tooltip: 'Convidar',
                   onPressed: () => _showInvite(context, goal.joinCode),
                 ),
+                if (isAdmin)
+                  PopupMenuButton<String>(
+                    onSelected: (v) {
+                      if (v == 'edit') _showEditGoal(context, ref, goal);
+                      if (v == 'delete') _confirmDelete(context, ref, goal.title);
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Editar GOAL')),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Excluir GOAL', style: TextStyle(color: AppColors.danger)),
+                      ),
+                    ],
+                  ),
               ],
               bottom: const TabBar(
                 isScrollable: true,
@@ -83,6 +97,129 @@ class GoalDetailScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  /// Admin edit sheet — only the mutable fields, each labelled with WHEN it applies.
+  void _showEditGoal(BuildContext context, WidgetRef ref, dynamic goal) {
+    final titleCtrl = TextEditingController(text: goal.title as String);
+    int sprintDays = goal.settings.sprintDurationDays as int;
+    int xpTarget = goal.settings.baseXpTargetPerSprint as int;
+    int tasksPerSprint = (xpTarget / (goal.settings.xpScalableMedium as int)).round().clamp(1, 50);
+    bool saving = false;
+
+    int xpMedium() => (xpTarget / tasksPerSprint).round().clamp(1, 100000);
+    int xpEasy() => (xpMedium() / 2).round().clamp(1, 100000);
+    int xpHard() => xpMedium() * 2;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl,
+              MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Editar GOAL', style: Theme.of(ctx).textTheme.headlineSmall),
+              const SizedBox(height: AppSpacing.lg),
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Nome')),
+              const SizedBox(height: AppSpacing.lg),
+              _EditStepper(
+                label: 'Duração da sprint',
+                hint: 'vale a partir da PRÓXIMA sprint',
+                value: '$sprintDays dias',
+                onMinus: () => setSheet(() => sprintDays = (sprintDays - 1).clamp(1, 90)),
+                onPlus: () => setSheet(() => sprintDays = (sprintDays + 1).clamp(1, 90)),
+              ),
+              _EditStepper(
+                label: 'Meta de XP por sprint',
+                hint: 'aplica AGORA — XP ganho e dívidas são mantidos',
+                value: '$xpTarget XP',
+                onMinus: () => setSheet(() => xpTarget = (xpTarget - 10).clamp(10, 1000)),
+                onPlus: () => setSheet(() => xpTarget = (xpTarget + 10).clamp(10, 1000)),
+              ),
+              _EditStepper(
+                label: 'Tarefas por sprint (média)',
+                hint: 'recalcula: Fácil ${xpEasy()} · Médio ${xpMedium()} · Difícil ${xpHard()} XP',
+                value: '$tasksPerSprint',
+                onMinus: () => setSheet(() => tasksPerSprint = (tasksPerSprint - 1).clamp(1, 50)),
+                onPlus: () => setSheet(() => tasksPerSprint = (tasksPerSprint + 1).clamp(1, 50)),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: saving
+                    ? null
+                    : () async {
+                        setSheet(() => saving = true);
+                        try {
+                          await ref.read(goalsRepositoryProvider).updateGoal(goalId, {
+                            'title': titleCtrl.text.trim(),
+                            'sprintDurationDays': sprintDays,
+                            'baseXpTargetPerSprint': xpTarget,
+                            'xpScalableEasy': xpEasy(),
+                            'xpScalableMedium': xpMedium(),
+                            'xpScalableHard': xpHard(),
+                          });
+                          ref.invalidate(goalDetailProvider(goalId));
+                          ref.invalidate(blockingStateProvider(goalId));
+                          ref.invalidate(membersProvider(goalId));
+                          ref.invalidate(tasksProvider(goalId));
+                          ref.invalidate(goalsListProvider);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        } catch (_) {
+                          setSheet(() => saving = false);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(content: Text('Não foi possível salvar.')),
+                            );
+                          }
+                        }
+                      },
+                child: saving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Salvar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Deleting is the only way out — make sure the admin understands the blast radius.
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, String title) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Excluir "$title"?'),
+        content: const Text(
+            'O GOAL some para TODOS os membros, o código deixa de funcionar e os bloqueios são liberados. '
+            'Isso não pode ser desfeito.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(goalsRepositoryProvider).deleteGoal(goalId);
+    ref.invalidate(goalsListProvider);
+    if (context.mounted) {
+      context.go('/home');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('GOAL "$title" excluído.')),
+      );
+    }
   }
 
   /// Invite = share the goal's join code. Friends type it in "Entrar com código" on Home.
@@ -138,6 +275,50 @@ class GoalDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Stepper row used by the admin edit sheet, with a hint explaining WHEN the change applies.
+class _EditStepper extends StatelessWidget {
+  const _EditStepper({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.onMinus,
+    required this.onPlus,
+  });
+
+  final String label;
+  final String hint;
+  final String value;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(hint, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          IconButton(onPressed: onMinus, icon: const Icon(Icons.remove_circle_outline)),
+          SizedBox(
+            width: 72,
+            child: Text(value, textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          IconButton(onPressed: onPlus, icon: const Icon(Icons.add_circle_outline)),
+        ],
       ),
     );
   }

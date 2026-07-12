@@ -49,6 +49,11 @@ public class GetBlockingStateHandler : IRequestHandler<GetBlockingStateQuery, Re
             .FirstOrDefaultAsync(g => g.Id == q.GoalId, ct);
         if (goal?.CurrentSprintId is null) return Error.NotFound("No active sprint.");
 
+        // Archived (deleted) goal: nobody stays blocked by it — lets the phone clear its policy.
+        if (goal.Status == GoalStatus.Archived)
+            return Result.Success(new BlockingStateDto(
+                false, 1m, 0m, 0, 0, 0, 0, 0, 0, false, 0, new List<BlockedAppInfo>()));
+
         var sprint = await _db.Sprints.FirstAsync(sp => sp.Id == goal.CurrentSprintId, ct);
         var state = await _db.SprintMemberStates
             .FirstOrDefaultAsync(ms => ms.SprintId == sprint.Id && ms.GoalMemberId == member.Id, ct);

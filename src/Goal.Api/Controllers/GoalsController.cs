@@ -20,6 +20,18 @@ public class GoalsController : ApiControllerBase
     [HttpGet("{goalId:guid}")]
     public async Task<IActionResult> Get(Guid goalId) => ToResult(await Mediator.Send(new GetGoalQuery(goalId)));
 
+    /// <summary>Admin-only edit of the mutable fields (title, sprint duration, XP target/table).</summary>
+    [HttpPatch("{goalId:guid}")]
+    public async Task<IActionResult> Update(Guid goalId, UpdateGoalBody body)
+        => ToResult(await Mediator.Send(new UpdateGoalCommand(
+            goalId, body.Title, body.SprintDurationDays, body.BaseXpTargetPerSprint,
+            body.XpScalableEasy, body.XpScalableMedium, body.XpScalableHard)));
+
+    /// <summary>Admin-only. Archives the goal; members are released automatically.</summary>
+    [HttpDelete("{goalId:guid}")]
+    public async Task<IActionResult> Delete(Guid goalId)
+        => ToResult(await Mediator.Send(new DeleteGoalCommand(goalId)));
+
     [HttpGet("{goalId:guid}/blocking-state")]
     public async Task<IActionResult> BlockingState(Guid goalId)
         => ToResult(await Mediator.Send(new GetBlockingStateQuery(goalId)));
@@ -52,6 +64,13 @@ public class GoalsController : ApiControllerBase
 
 public record InviteBody(string Email);
 public record JoinBody(string Code);
+public record UpdateGoalBody(
+    string? Title,
+    int? SprintDurationDays,
+    int? BaseXpTargetPerSprint,
+    int? XpScalableEasy,
+    int? XpScalableMedium,
+    int? XpScalableHard);
 
 /// <summary>Body for creating a task (goalId comes from the route).</summary>
 public record CreateTaskDefinitionBody(

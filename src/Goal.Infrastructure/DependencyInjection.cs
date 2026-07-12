@@ -58,8 +58,19 @@ public static class DependencyInjection
 
     private static void InitializeFirebase(IConfiguration config)
     {
+        if (FirebaseApp.DefaultInstance is not null) return;
+
+        // Preferred on PaaS panels: the service-account JSON pasted straight into an env var
+        // (Firebase__CredentialsJson). Falls back to a file path for local/dev setups.
+        var credentialsJson = config["Firebase:CredentialsJson"];
+        if (!string.IsNullOrWhiteSpace(credentialsJson))
+        {
+            FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromJson(credentialsJson) });
+            return;
+        }
+
         var credentialsPath = config["Firebase:CredentialsPath"];
-        if (FirebaseApp.DefaultInstance is null && !string.IsNullOrWhiteSpace(credentialsPath) && File.Exists(credentialsPath))
+        if (!string.IsNullOrWhiteSpace(credentialsPath) && File.Exists(credentialsPath))
         {
             FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromFile(credentialsPath) });
         }

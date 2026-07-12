@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:goal_app/design_system/components/goal_progress_ring.dart';
 import 'package:goal_app/design_system/theme/app_theme.dart';
 import 'package:goal_app/features/completion/presentation/complete_task_screen.dart';
+import 'package:goal_app/features/goals/presentation/create_goal_screen.dart';
 import 'package:goal_app/features/tasks/domain/task_models.dart';
 import 'package:goal_app/features/tasks/presentation/create_task_screen.dart';
 
@@ -46,6 +47,16 @@ void main() {
     await tester.tap(find.text('Enviar para aprovação'));
     await tester.pumpAndSettle();
     expect(find.text('Descreva o que foi feito.'), findsOneWidget);
+  });
+
+  testWidgets('create goal wizard derives the XP table from target / tasks', (tester) async {
+    await tester.pumpWidget(_wrap(const CreateGoalScreen()));
+    await tester.pumpAndSettle();
+
+    // Defaults: 100 XP / 5 tarefas -> medium 20, easy 10, hard 40.
+    await tester.scrollUntilVisible(find.textContaining('Valor calculado'), 200,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('Fácil 10 XP  ·  Médio 20 XP  ·  Difícil 40 XP'), findsOneWidget);
   });
 
   testWidgets('progress ring animates to the given percentage', (tester) async {

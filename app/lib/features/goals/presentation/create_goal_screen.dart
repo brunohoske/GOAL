@@ -36,8 +36,15 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
   int _sprintDays = 14;
   int _xpTarget = 100;
+  int _tasksPerSprint = 5;
   double _unblockPct = 0.70;
   int _finalTriggerDays = 1;
+
+  /// XP table derived from "target / expected tasks": a MEDIUM task is worth the
+  /// average; EASY is half; HARD is double. Snapshotted into GoalSettings on create.
+  int get _xpMedium => (_xpTarget / _tasksPerSprint).round().clamp(1, 100000);
+  int get _xpEasy => (_xpMedium / 2).round().clamp(1, 100000);
+  int get _xpHard => _xpMedium * 2;
   final Set<String> _blockedPkgs = {'com.instagram.android', 'com.zhiliaoapp.musically', 'com.twitter.android'};
   bool _submitting = false;
 
@@ -65,9 +72,9 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
           'finalTriggerTargetPct': 1.00,
           'voteApprovalThreshold': 0.60,
           'debtCarryEnabled': true,
-          'xpScalableEasy': 10,
-          'xpScalableMedium': 25,
-          'xpScalableHard': 50,
+          'xpScalableEasy': _xpEasy,
+          'xpScalableMedium': _xpMedium,
+          'xpScalableHard': _xpHard,
           'blockedApps': _knownApps
               .where((a) => _blockedPkgs.contains(a.pkg))
               .map((a) => {'packageName': a.pkg, 'displayName': a.name})
@@ -116,6 +123,45 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                   value: '$_xpTarget XP',
                   onMinus: () => setState(() => _xpTarget = (_xpTarget - 10).clamp(10, 1000)),
                   onPlus: () => setState(() => _xpTarget = (_xpTarget + 10).clamp(10, 1000)),
+                ),
+                const Divider(height: AppSpacing.xl),
+                _StepperRow(
+                  label: 'Tarefas por sprint (média por pessoa)',
+                  value: '$_tasksPerSprint',
+                  onMinus: () => setState(() => _tasksPerSprint = (_tasksPerSprint - 1).clamp(1, 50)),
+                  onPlus: () => setState(() => _tasksPerSprint = (_tasksPerSprint + 1).clamp(1, 50)),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Live preview of the derived XP table, so the rule is transparent.
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Valor calculado das tarefas',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Fácil $_xpEasy XP  ·  Médio $_xpMedium XP  ·  Difícil $_xpHard XP',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '$_xpTarget XP ÷ $_tasksPerSprint tarefas = $_xpMedium XP por tarefa média. '
+                        'Fácil vale metade, difícil vale o dobro.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

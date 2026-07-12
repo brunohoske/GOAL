@@ -21,6 +21,9 @@ class BlockPolicy {
     required this.currentPct,
     required this.xpRemaining,
     required this.goalTitle,
+    required this.randomOverlayEnabled,
+    required this.typingSabotageEnabled,
+    required this.typingSabotageText,
   });
 
   bool enabled;
@@ -29,6 +32,11 @@ class BlockPolicy {
   int currentPct;
   int xpRemaining;
   String goalTitle;
+
+  /// Chaos-mode nags (already gated to blocked + day-window by the backend).
+  bool randomOverlayEnabled;
+  bool typingSabotageEnabled;
+  String typingSabotageText;
 }
 
 @HostApi()

@@ -23,10 +23,14 @@ object BlockOverlay {
     private var shownAt = 0L
     private const val MIN_INTERVAL_MS = 1500L // avoid flicker on rapid window events
 
-    fun show(context: Context, policy: BlockPolicyStore.Policy) {
+    /**
+     * Shows the overlay. [force] bypasses the anti-flicker throttle — used by the random
+     * chaos-mode nag, which intentionally appears on its own schedule.
+     */
+    fun show(context: Context, policy: BlockPolicyStore.Policy, force: Boolean = false) {
         if (!canDrawOverlays(context)) return
         val now = System.currentTimeMillis()
-        if (now - shownAt < MIN_INTERVAL_MS) return
+        if (!force && now - shownAt < MIN_INTERVAL_MS) return
         shownAt = now
 
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager

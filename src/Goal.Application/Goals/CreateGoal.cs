@@ -82,6 +82,11 @@ public class CreateGoalHandler : IRequestHandler<CreateGoalCommand, Result<Guid>
             XpScalableEasy = s.XpScalableEasy,
             XpScalableMedium = s.XpScalableMedium,
             XpScalableHard = s.XpScalableHard,
+            RandomOverlayEnabled = s.RandomOverlayEnabled,
+            RandomOverlayDaysBefore = s.RandomOverlayDaysBefore,
+            TypingSabotageEnabled = s.TypingSabotageEnabled,
+            TypingSabotageDaysBefore = s.TypingSabotageDaysBefore,
+            TypingSabotageText = string.IsNullOrWhiteSpace(s.TypingSabotageText) ? null : s.TypingSabotageText.Trim(),
             BlockedApps = s.BlockedApps
                 .Select(a => new GoalBlockedApp { PackageName = a.PackageName, DisplayName = a.DisplayName })
                 .ToList()

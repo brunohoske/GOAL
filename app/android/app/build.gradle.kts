@@ -48,4 +48,6 @@ flutter {
 dependencies {
     // Backports java.time etc. so flutter_local_notifications works below API 26.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+    // Periodic worker that drives the random "chaos mode" overlay nag.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

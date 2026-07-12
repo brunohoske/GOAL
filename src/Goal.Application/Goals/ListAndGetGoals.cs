@@ -96,7 +96,9 @@ public class GetGoalHandler : IRequestHandler<GetGoalQuery, Result<GoalDetailDto
                 s.SprintDurationDays, s.BaseXpTargetPerSprint, s.UnblockThresholdPct,
                 s.FinalTriggerDaysBefore, s.FinalTriggerTargetPct, s.VoteApprovalThreshold,
                 s.DebtCarryEnabled, s.XpScalableEasy, s.XpScalableMedium, s.XpScalableHard,
-                s.BlockedApps.Select(a => new BlockedAppDto(a.PackageName, a.DisplayName)).ToList()),
+                s.BlockedApps.Select(a => new BlockedAppDto(a.PackageName, a.DisplayName)).ToList(),
+                s.RandomOverlayEnabled, s.RandomOverlayDaysBefore,
+                s.TypingSabotageEnabled, s.TypingSabotageDaysBefore, s.TypingSabotageText),
             goal.CurrentSprintId,
             sprintNumber,
             sprintEndsAt);

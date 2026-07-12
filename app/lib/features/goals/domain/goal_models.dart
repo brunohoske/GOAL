@@ -23,6 +23,11 @@ class GoalSettings {
     required this.xpScalableMedium,
     required this.xpScalableHard,
     required this.blockedApps,
+    this.randomOverlayEnabled = false,
+    this.randomOverlayDaysBefore = 3,
+    this.typingSabotageEnabled = false,
+    this.typingSabotageDaysBefore = 3,
+    this.typingSabotageText,
   });
 
   final int sprintDurationDays;
@@ -36,6 +41,11 @@ class GoalSettings {
   final int xpScalableMedium;
   final int xpScalableHard;
   final List<BlockedApp> blockedApps;
+  final bool randomOverlayEnabled;
+  final int randomOverlayDaysBefore;
+  final bool typingSabotageEnabled;
+  final int typingSabotageDaysBefore;
+  final String? typingSabotageText;
 
   factory GoalSettings.fromJson(Map<String, dynamic> j) => GoalSettings(
         sprintDurationDays: j['sprintDurationDays'],
@@ -49,6 +59,11 @@ class GoalSettings {
         xpScalableMedium: j['xpScalableMedium'],
         xpScalableHard: j['xpScalableHard'],
         blockedApps: (j['blockedApps'] as List).map((e) => BlockedApp.fromJson(e)).toList(),
+        randomOverlayEnabled: (j['randomOverlayEnabled'] as bool?) ?? false,
+        randomOverlayDaysBefore: (j['randomOverlayDaysBefore'] as int?) ?? 3,
+        typingSabotageEnabled: (j['typingSabotageEnabled'] as bool?) ?? false,
+        typingSabotageDaysBefore: (j['typingSabotageDaysBefore'] as int?) ?? 3,
+        typingSabotageText: j['typingSabotageText'] as String?,
       );
 
   Map<String, dynamic> toJson() => {

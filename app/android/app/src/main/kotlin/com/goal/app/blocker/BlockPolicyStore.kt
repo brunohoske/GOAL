@@ -14,6 +14,9 @@ object BlockPolicyStore {
     private const val KEY_CURRENT_PCT = "currentPct"
     private const val KEY_XP_REMAINING = "xpRemaining"
     private const val KEY_GOAL_TITLE = "goalTitle"
+    private const val KEY_OVERLAY_NAG = "randomOverlay"
+    private const val KEY_TYPING_NAG = "typingSabotage"
+    private const val KEY_TYPING_TEXT = "typingText"
 
     data class Policy(
         val enabled: Boolean,
@@ -22,7 +25,14 @@ object BlockPolicyStore {
         val currentPct: Int,
         val xpRemaining: Int,
         val goalTitle: String,
-    )
+        val randomOverlayEnabled: Boolean = false,
+        val typingSabotageEnabled: Boolean = false,
+        val typingSabotageText: String = "",
+    ) {
+        /** True when any enforcement (app block or a nag) is active. */
+        val hasAnyEnforcement: Boolean
+            get() = enabled || randomOverlayEnabled || typingSabotageEnabled
+    }
 
     fun save(context: Context, policy: Policy) {
         context.prefs().edit()
@@ -32,6 +42,9 @@ object BlockPolicyStore {
             .putInt(KEY_CURRENT_PCT, policy.currentPct)
             .putInt(KEY_XP_REMAINING, policy.xpRemaining)
             .putString(KEY_GOAL_TITLE, policy.goalTitle)
+            .putBoolean(KEY_OVERLAY_NAG, policy.randomOverlayEnabled)
+            .putBoolean(KEY_TYPING_NAG, policy.typingSabotageEnabled)
+            .putString(KEY_TYPING_TEXT, policy.typingSabotageText)
             .apply()
     }
 
@@ -48,6 +61,9 @@ object BlockPolicyStore {
             currentPct = p.getInt(KEY_CURRENT_PCT, 0),
             xpRemaining = p.getInt(KEY_XP_REMAINING, 0),
             goalTitle = p.getString(KEY_GOAL_TITLE, "") ?: "",
+            randomOverlayEnabled = p.getBoolean(KEY_OVERLAY_NAG, false),
+            typingSabotageEnabled = p.getBoolean(KEY_TYPING_NAG, false),
+            typingSabotageText = p.getString(KEY_TYPING_TEXT, "") ?: "",
         )
     }
 

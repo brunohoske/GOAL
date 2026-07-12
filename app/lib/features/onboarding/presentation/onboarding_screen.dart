@@ -45,11 +45,13 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       body: 'Se você não atingir sua meta de XP na sprint, o Goal BLOQUEIA os apps '
           'que o grupo escolheu (ex: Instagram, TikTok) — e também os sites deles '
           'no navegador — até você se recuperar.\n\n'
-          'Para isso o app usa o serviço de Acessibilidade do Android: ele verifica '
-          'qual app está aberto e o endereço na barra do navegador, e exibe uma tela '
-          'de bloqueio. Isso só acontece com a sua permissão explícita, que você '
-          'concede (e pode revogar) nas configurações do sistema. Nada é armazenado '
-          'ou enviado para fora do aparelho.',
+          'O criador do GOAL pode ainda ligar o "modo caos": lembretes surpresa na '
+          'tela e a troca do que você digita por uma cobrança — só enquanto você '
+          'estiver devendo XP.\n\n'
+          'Para isso o app usa o serviço de Acessibilidade do Android, com a sua '
+          'permissão explícita (que você concede e pode revogar no sistema). Ele só '
+          'verifica o app aberto, o endereço do navegador e o campo em edição no '
+          'momento — nada é armazenado ou enviado para fora do aparelho.',
     ),
   ];
 

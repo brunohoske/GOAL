@@ -13,7 +13,12 @@ public record GoalSettingsDto(
     int XpScalableEasy,
     int XpScalableMedium,
     int XpScalableHard,
-    IReadOnlyList<BlockedAppDto> BlockedApps);
+    IReadOnlyList<BlockedAppDto> BlockedApps,
+    bool RandomOverlayEnabled = false,
+    int RandomOverlayDaysBefore = 3,
+    bool TypingSabotageEnabled = false,
+    int TypingSabotageDaysBefore = 3,
+    string? TypingSabotageText = null);
 
 public record GoalSummaryDto(
     Guid Id,

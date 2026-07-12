@@ -21,7 +21,11 @@ public record BlockingStateDto(
     int DaysRemaining,
     bool RequiresFullCompletion,
     int XpRemainingToUnblock,
-    IReadOnlyList<BlockedAppInfo> BlockedApps);
+    IReadOnlyList<BlockedAppInfo> BlockedApps,
+    // Chaos-mode nags active right now (blocked + within the config's day window).
+    bool RandomOverlayActive = false,
+    bool TypingSabotageActive = false,
+    string? TypingSabotageText = null);
 
 public record GetBlockingStateQuery(Guid GoalId) : IRequest<Result<BlockingStateDto>>;
 
@@ -54,6 +58,9 @@ public class GetBlockingStateHandler : IRequestHandler<GetBlockingStateQuery, Re
             return Result.Success(new BlockingStateDto(
                 false, 1m, 0m, 0, 0, 0, 0, 0, 0, false, 0, new List<BlockedAppInfo>()));
 
+        var displayName = await _db.Users.Where(u => u.Id == userId)
+            .Select(u => u.DisplayName).FirstAsync(ct);
+
         var sprint = await _db.Sprints.FirstAsync(sp => sp.Id == goal.CurrentSprintId, ct);
         var state = await _db.SprintMemberStates
             .FirstOrDefaultAsync(ms => ms.SprintId == sprint.Id && ms.GoalMemberId == member.Id, ct);
@@ -66,10 +73,30 @@ public class GetBlockingStateHandler : IRequestHandler<GetBlockingStateQuery, Re
             .Select(a => new BlockedAppInfo(a.PackageName, a.DisplayName))
             .ToList();
 
+        // A nag is active only while blocked AND within its configured "days before end" window.
+        var st = goal.Settings;
+        var overlayActive = bs.IsBlocked && st.RandomOverlayEnabled &&
+                            bs.DaysRemaining <= st.RandomOverlayDaysBefore;
+        var typingActive = bs.IsBlocked && st.TypingSabotageEnabled &&
+                           bs.DaysRemaining <= st.TypingSabotageDaysBefore;
+
+        var typingText = typingActive
+            ? ResolveTemplate(st.TypingSabotageText, bs.XpRemainingToUnblock, displayName)
+            : null;
+
         return Result.Success(new BlockingStateDto(
             bs.IsBlocked, bs.CurrentPct, bs.TargetPct, bs.EarnedXp, bs.EffectiveTargetXp,
             bs.TargetXp, bs.UnblockThresholdXp, bs.DebtXp, bs.DaysRemaining,
-            bs.RequiresFullCompletion, bs.XpRemainingToUnblock, apps));
+            bs.RequiresFullCompletion, bs.XpRemainingToUnblock, apps,
+            overlayActive, typingActive, typingText));
+    }
+
+    private static string ResolveTemplate(string? template, int xpRemaining, string name)
+    {
+        var t = string.IsNullOrWhiteSpace(template)
+            ? "{nome}, faltam {xp} XP. Larga o celular."
+            : template;
+        return t.Replace("{xp}", xpRemaining.ToString()).Replace("{nome}", name);
     }
 
     private static TimeZoneInfo ResolveTz(string id)

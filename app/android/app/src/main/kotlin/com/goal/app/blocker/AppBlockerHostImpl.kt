@@ -25,11 +25,18 @@ class AppBlockerHostImpl(private val context: Context) : AppBlockerHost {
                 currentPct = policy.currentPct.toInt(),
                 xpRemaining = policy.xpRemaining.toInt(),
                 goalTitle = policy.goalTitle,
+                randomOverlayEnabled = policy.randomOverlayEnabled,
+                typingSabotageEnabled = policy.typingSabotageEnabled,
+                typingSabotageText = policy.typingSabotageText,
             ),
         )
+        RandomOverlayScheduler.sync(context, policy.randomOverlayEnabled)
     }
 
-    override fun clearPolicy() = BlockPolicyStore.clear(context)
+    override fun clearPolicy() {
+        BlockPolicyStore.clear(context)
+        RandomOverlayScheduler.sync(context, false)
+    }
 
     override fun hasAccessibilityPermission(): Boolean {
         val expected = "${context.packageName}/${BlockerAccessibilityService::class.java.name}"

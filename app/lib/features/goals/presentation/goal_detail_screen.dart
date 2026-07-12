@@ -116,6 +116,12 @@ class GoalDetailScreen extends ConsumerWidget {
     int sprintDays = goal.settings.sprintDurationDays as int;
     int xpTarget = goal.settings.baseXpTargetPerSprint as int;
     int tasksPerSprint = (xpTarget / (goal.settings.xpScalableMedium as int)).round().clamp(1, 50);
+    bool overlayEnabled = goal.settings.randomOverlayEnabled as bool;
+    int overlayDays = goal.settings.randomOverlayDaysBefore as int;
+    bool typingEnabled = goal.settings.typingSabotageEnabled as bool;
+    int typingDays = goal.settings.typingSabotageDaysBefore as int;
+    final typingCtrl = TextEditingController(
+        text: (goal.settings.typingSabotageText as String?) ?? '{nome}, faltam {xp} XP. Larga o celular! 📵');
     bool saving = false;
 
     int xpMedium() => (xpTarget / tasksPerSprint).round().clamp(1, 100000);
@@ -161,6 +167,48 @@ class GoalDetailScreen extends ConsumerWidget {
                 onMinus: () => setSheet(() => tasksPerSprint = (tasksPerSprint - 1).clamp(1, 50)),
                 onPlus: () => setSheet(() => tasksPerSprint = (tasksPerSprint + 1).clamp(1, 50)),
               ),
+              const Divider(height: AppSpacing.xl),
+              Text('Modo caos', style: Theme.of(ctx).textTheme.titleMedium),
+              SwitchListTile(
+                value: overlayEnabled,
+                onChanged: (v) => setSheet(() => overlayEnabled = v),
+                title: const Text('Overlay surpresa'),
+                contentPadding: EdgeInsets.zero,
+                activeColor: AppColors.primary,
+              ),
+              if (overlayEnabled)
+                _EditStepper(
+                  label: 'Ativar faltando',
+                  hint: 'dias para o fim da sprint',
+                  value: '$overlayDays dias',
+                  onMinus: () => setSheet(() => overlayDays = (overlayDays - 1).clamp(0, 90)),
+                  onPlus: () => setSheet(() => overlayDays = (overlayDays + 1).clamp(0, 90)),
+                ),
+              SwitchListTile(
+                value: typingEnabled,
+                onChanged: (v) => setSheet(() => typingEnabled = v),
+                title: const Text('Sabotagem de digitação'),
+                contentPadding: EdgeInsets.zero,
+                activeColor: AppColors.primary,
+              ),
+              if (typingEnabled) ...[
+                _EditStepper(
+                  label: 'Ativar faltando',
+                  hint: 'dias para o fim da sprint',
+                  value: '$typingDays dias',
+                  onMinus: () => setSheet(() => typingDays = (typingDays - 1).clamp(0, 90)),
+                  onPlus: () => setSheet(() => typingDays = (typingDays + 1).clamp(0, 90)),
+                ),
+                TextField(
+                  controller: typingCtrl,
+                  maxLines: 2,
+                  maxLength: 280,
+                  decoration: const InputDecoration(
+                    labelText: 'Mensagem',
+                    helperText: 'Use {xp} e {nome}.',
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               FilledButton(
                 onPressed: saving
@@ -175,6 +223,11 @@ class GoalDetailScreen extends ConsumerWidget {
                             'xpScalableEasy': xpEasy(),
                             'xpScalableMedium': xpMedium(),
                             'xpScalableHard': xpHard(),
+                            'randomOverlayEnabled': overlayEnabled,
+                            'randomOverlayDaysBefore': overlayDays,
+                            'typingSabotageEnabled': typingEnabled,
+                            'typingSabotageDaysBefore': typingDays,
+                            'typingSabotageText': typingCtrl.text.trim(),
                           });
                           ref.invalidate(goalDetailProvider(goalId));
                           ref.invalidate(blockingStateProvider(goalId));

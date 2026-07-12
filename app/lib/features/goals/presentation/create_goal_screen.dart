@@ -46,12 +46,21 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   int get _xpEasy => (_xpMedium / 2).round().clamp(1, 100000);
   int get _xpHard => _xpMedium * 2;
   final Set<String> _blockedPkgs = {'com.instagram.android', 'com.zhiliaoapp.musically', 'com.twitter.android'};
+
+  // Chaos mode
+  bool _overlayEnabled = false;
+  int _overlayDays = 3;
+  bool _typingEnabled = false;
+  int _typingDays = 3;
+  final _typingText = TextEditingController(text: '{nome}, faltam {xp} XP. Larga o celular! 📵');
+
   bool _submitting = false;
 
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
+    _typingText.dispose();
     super.dispose();
   }
 
@@ -75,6 +84,11 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
           'xpScalableEasy': _xpEasy,
           'xpScalableMedium': _xpMedium,
           'xpScalableHard': _xpHard,
+          'randomOverlayEnabled': _overlayEnabled,
+          'randomOverlayDaysBefore': _overlayDays,
+          'typingSabotageEnabled': _typingEnabled,
+          'typingSabotageDaysBefore': _typingDays,
+          'typingSabotageText': _typingText.text.trim().isEmpty ? null : _typingText.text.trim(),
           'blockedApps': _knownApps
               .where((a) => _blockedPkgs.contains(a.pkg))
               .map((a) => {'packageName': a.pkg, 'displayName': a.name})
@@ -203,6 +217,57 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                     );
                   }).toList(),
                 ),
+              ],
+            ),
+          ),
+          _Section(
+            title: 'Modo caos (opcional)',
+            subtitle: 'Pressão extra quando faltar meta. Pode desligar depois.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SwitchListTile(
+                  value: _overlayEnabled,
+                  onChanged: (v) => setState(() => _overlayEnabled = v),
+                  title: const Text('Overlay surpresa'),
+                  subtitle: const Text('~35% de chance, a cada ~30 min, de invadir a tela com o XP faltante.'),
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppColors.primary,
+                ),
+                if (_overlayEnabled)
+                  _StepperRow(
+                    label: 'Ativar faltando',
+                    value: '$_overlayDays dias',
+                    onMinus: () => setState(() => _overlayDays = (_overlayDays - 1).clamp(0, 90)),
+                    onPlus: () => setState(() => _overlayDays = (_overlayDays + 1).clamp(0, 90)),
+                  ),
+                const Divider(height: AppSpacing.xl),
+                SwitchListTile(
+                  value: _typingEnabled,
+                  onChanged: (v) => setState(() => _typingEnabled = v),
+                  title: const Text('Sabotagem de digitação'),
+                  subtitle: const Text('~25% de chance, a cada tecla em qualquer app, de trocar o texto pela mensagem abaixo.'),
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppColors.primary,
+                ),
+                if (_typingEnabled) ...[
+                  _StepperRow(
+                    label: 'Ativar faltando',
+                    value: '$_typingDays dias',
+                    onMinus: () => setState(() => _typingDays = (_typingDays - 1).clamp(0, 90)),
+                    onPlus: () => setState(() => _typingDays = (_typingDays + 1).clamp(0, 90)),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: _typingText,
+                    maxLines: 2,
+                    maxLength: 280,
+                    decoration: const InputDecoration(
+                      labelText: 'Mensagem',
+                      helperText: 'Use {xp} para o XP faltante e {nome} para o nome da pessoa.',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

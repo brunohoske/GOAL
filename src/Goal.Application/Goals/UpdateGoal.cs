@@ -22,7 +22,12 @@ public record UpdateGoalCommand(
     int? BaseXpTargetPerSprint,
     int? XpScalableEasy,
     int? XpScalableMedium,
-    int? XpScalableHard) : IRequest<Result>;
+    int? XpScalableHard,
+    bool? RandomOverlayEnabled = null,
+    int? RandomOverlayDaysBefore = null,
+    bool? TypingSabotageEnabled = null,
+    int? TypingSabotageDaysBefore = null,
+    string? TypingSabotageText = null) : IRequest<Result>;
 
 public class UpdateGoalValidator : AbstractValidator<UpdateGoalCommand>
 {
@@ -34,6 +39,9 @@ public class UpdateGoalValidator : AbstractValidator<UpdateGoalCommand>
         RuleFor(x => x.XpScalableEasy!.Value).GreaterThan(0).When(x => x.XpScalableEasy.HasValue);
         RuleFor(x => x.XpScalableMedium!.Value).GreaterThan(0).When(x => x.XpScalableMedium.HasValue);
         RuleFor(x => x.XpScalableHard!.Value).GreaterThan(0).When(x => x.XpScalableHard.HasValue);
+        RuleFor(x => x.RandomOverlayDaysBefore!.Value).InclusiveBetween(0, 90).When(x => x.RandomOverlayDaysBefore.HasValue);
+        RuleFor(x => x.TypingSabotageDaysBefore!.Value).InclusiveBetween(0, 90).When(x => x.TypingSabotageDaysBefore.HasValue);
+        RuleFor(x => x.TypingSabotageText!).MaximumLength(280).When(x => x.TypingSabotageText is not null);
     }
 }
 
@@ -68,6 +76,15 @@ public class UpdateGoalHandler : IRequestHandler<UpdateGoalCommand, Result>
         if (cmd.XpScalableEasy is int e) goal.Settings.XpScalableEasy = e;
         if (cmd.XpScalableMedium is int m) goal.Settings.XpScalableMedium = m;
         if (cmd.XpScalableHard is int h) goal.Settings.XpScalableHard = h;
+
+        // Chaos-mode nags: can be toggled/adjusted after creation (deliberate exception).
+        if (cmd.RandomOverlayEnabled is bool ro) goal.Settings.RandomOverlayEnabled = ro;
+        if (cmd.RandomOverlayDaysBefore is int rod) goal.Settings.RandomOverlayDaysBefore = rod;
+        if (cmd.TypingSabotageEnabled is bool ts) goal.Settings.TypingSabotageEnabled = ts;
+        if (cmd.TypingSabotageDaysBefore is int tsd) goal.Settings.TypingSabotageDaysBefore = tsd;
+        if (cmd.TypingSabotageText is not null)
+            goal.Settings.TypingSabotageText =
+                string.IsNullOrWhiteSpace(cmd.TypingSabotageText) ? null : cmd.TypingSabotageText.Trim();
 
         // Applies now: rebase every member's target in the CURRENT sprint, preserving
         // earned XP and carried debt (effective target = new base + existing debt).

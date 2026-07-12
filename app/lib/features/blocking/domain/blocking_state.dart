@@ -15,6 +15,9 @@ class BlockingState {
     required this.requiresFullCompletion,
     required this.xpRemainingToUnblock,
     required this.blockedApps,
+    this.randomOverlayActive = false,
+    this.typingSabotageActive = false,
+    this.typingSabotageText,
   });
 
   final bool isBlocked;
@@ -29,6 +32,9 @@ class BlockingState {
   final bool requiresFullCompletion;
   final int xpRemainingToUnblock;
   final List<BlockedApp> blockedApps;
+  final bool randomOverlayActive;
+  final bool typingSabotageActive;
+  final String? typingSabotageText;
 
   factory BlockingState.fromJson(Map<String, dynamic> j) => BlockingState(
         isBlocked: j['isBlocked'],
@@ -43,5 +49,8 @@ class BlockingState {
         requiresFullCompletion: j['requiresFullCompletion'],
         xpRemainingToUnblock: j['xpRemainingToUnblock'],
         blockedApps: (j['blockedApps'] as List).map((e) => BlockedApp.fromJson(e)).toList(),
+        randomOverlayActive: (j['randomOverlayActive'] as bool?) ?? false,
+        typingSabotageActive: (j['typingSabotageActive'] as bool?) ?? false,
+        typingSabotageText: j['typingSabotageText'] as String?,
       );
 }

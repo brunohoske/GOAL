@@ -25,7 +25,9 @@ public class GoalsController : ApiControllerBase
     public async Task<IActionResult> Update(Guid goalId, UpdateGoalBody body)
         => ToResult(await Mediator.Send(new UpdateGoalCommand(
             goalId, body.Title, body.SprintDurationDays, body.BaseXpTargetPerSprint,
-            body.XpScalableEasy, body.XpScalableMedium, body.XpScalableHard)));
+            body.XpScalableEasy, body.XpScalableMedium, body.XpScalableHard,
+            body.RandomOverlayEnabled, body.RandomOverlayDaysBefore,
+            body.TypingSabotageEnabled, body.TypingSabotageDaysBefore, body.TypingSabotageText)));
 
     /// <summary>Admin-only. Archives the goal; members are released automatically.</summary>
     [HttpDelete("{goalId:guid}")]
@@ -70,7 +72,12 @@ public record UpdateGoalBody(
     int? BaseXpTargetPerSprint,
     int? XpScalableEasy,
     int? XpScalableMedium,
-    int? XpScalableHard);
+    int? XpScalableHard,
+    bool? RandomOverlayEnabled,
+    int? RandomOverlayDaysBefore,
+    bool? TypingSabotageEnabled,
+    int? TypingSabotageDaysBefore,
+    string? TypingSabotageText);
 
 /// <summary>Body for creating a task (goalId comes from the route).</summary>
 public record CreateTaskDefinitionBody(

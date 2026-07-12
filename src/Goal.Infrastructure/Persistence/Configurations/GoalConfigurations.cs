@@ -32,6 +32,7 @@ public class GoalSettingsConfiguration : IEntityTypeConfiguration<GoalSettings>
         e.Property(x => x.UnblockThresholdPct).HasColumnType("numeric(4,3)");
         e.Property(x => x.FinalTriggerTargetPct).HasColumnType("numeric(4,3)");
         e.Property(x => x.VoteApprovalThreshold).HasColumnType("numeric(4,3)");
+        e.Property(x => x.TypingSabotageText).HasMaxLength(280);
         e.HasIndex(x => x.GoalId).IsUnique();
         // Navigation back to Goal is configured from the Goal side (HasOne(x => x.Settings)).
         e.Ignore(x => x.Goal);

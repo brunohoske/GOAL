@@ -62,7 +62,11 @@ data class BlockPolicy (
   val targetPct: Long,
   val currentPct: Long,
   val xpRemaining: Long,
-  val goalTitle: String
+  val goalTitle: String,
+  /** Chaos-mode nags (already gated to blocked + day-window by the backend). */
+  val randomOverlayEnabled: Boolean,
+  val typingSabotageEnabled: Boolean,
+  val typingSabotageText: String
 )
  {
   companion object {
@@ -73,7 +77,10 @@ data class BlockPolicy (
       val currentPct = pigeonVar_list[3] as Long
       val xpRemaining = pigeonVar_list[4] as Long
       val goalTitle = pigeonVar_list[5] as String
-      return BlockPolicy(enabled, packages, targetPct, currentPct, xpRemaining, goalTitle)
+      val randomOverlayEnabled = pigeonVar_list[6] as Boolean
+      val typingSabotageEnabled = pigeonVar_list[7] as Boolean
+      val typingSabotageText = pigeonVar_list[8] as String
+      return BlockPolicy(enabled, packages, targetPct, currentPct, xpRemaining, goalTitle, randomOverlayEnabled, typingSabotageEnabled, typingSabotageText)
     }
   }
   fun toList(): List<Any?> {
@@ -84,6 +91,9 @@ data class BlockPolicy (
       currentPct,
       xpRemaining,
       goalTitle,
+      randomOverlayEnabled,
+      typingSabotageEnabled,
+      typingSabotageText,
     )
   }
 }

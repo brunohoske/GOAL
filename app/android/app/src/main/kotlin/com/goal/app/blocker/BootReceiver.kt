@@ -12,8 +12,9 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            // Policy persists across reboot; nothing else required for now.
-            BlockPolicyStore.load(context)
+            // Policy persists across reboot; re-arm the random-overlay worker if it was active.
+            val policy = BlockPolicyStore.load(context)
+            RandomOverlayScheduler.sync(context, policy.randomOverlayEnabled)
         }
     }
 }

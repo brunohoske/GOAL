@@ -1,15 +1,21 @@
 package com.goal.app.blocker
 
 import android.accessibilityservice.AccessibilityService
+import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import kotlin.random.Random
 
 /**
- * Enforces the block policy in two ways:
+ * Enforces the block policy in three ways:
  *  1. App blocking — a blocked app comes to the foreground (TYPE_WINDOW_STATE_CHANGED).
  *  2. Site blocking — a known browser shows a blocked domain in its URL bar
  *     (TYPE_WINDOW_CONTENT_CHANGED, throttled). Domains derive from the blocked packages.
+ *  3. Typing sabotage (chaos mode) — while active, each text change in any app has a ~25%
+ *     chance of being replaced by the goal's custom message (TYPE_VIEW_TEXT_CHANGED).
  *
- * On a hit it shows a full-screen overlay explaining why and sends the user home.
+ * On a block hit it shows a full-screen overlay explaining why and sends the user home.
+ * Only the address bar / edited field text is inspected; nothing is stored or transmitted.
  */
 class BlockerAccessibilityService : AccessibilityService() {
 
@@ -18,6 +24,7 @@ class BlockerAccessibilityService : AccessibilityService() {
         var onBlockedAppOpened: ((String) -> Unit)? = null
 
         private const val BROWSER_CHECK_INTERVAL_MS = 400L
+        private const val TYPING_SABOTAGE_CHANCE = 25 // percent, per text-change event
     }
 
     private var lastBrowserCheckAt = 0L
@@ -30,18 +37,20 @@ class BlockerAccessibilityService : AccessibilityService() {
         if (packageName == applicationContext.packageName) return
 
         val policy = BlockPolicyStore.load(applicationContext)
-        if (!policy.enabled) return
+        if (!policy.hasAnyEnforcement) return
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                if (policy.packages.contains(packageName)) {
+                if (policy.enabled && policy.packages.contains(packageName)) {
                     block(policy, packageName)
-                } else {
+                } else if (policy.enabled) {
                     maybeBlockBrowser(packageName, policy)
                 }
             }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ->
-                maybeBlockBrowser(packageName, policy)
+                if (policy.enabled) maybeBlockBrowser(packageName, policy)
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ->
+                if (policy.typingSabotageEnabled) maybeSabotageTyping(event, policy)
             else -> Unit
         }
     }
@@ -67,6 +76,31 @@ class BlockerAccessibilityService : AccessibilityService() {
         val host = BrowserBlocklist.hostOf(urlText) ?: return
         if (BrowserBlocklist.isBlockedHost(host, domains)) {
             block(policy, "$packageName:$host")
+        }
+    }
+
+    /**
+     * Chaos mode: on a random ~25% of keystrokes, replace the edited field's text with the
+     * goal's custom message (with {xp}/{nome} already resolved by the backend). Only touches
+     * editable fields; the caret jumps to the end so the user keeps fighting it.
+     */
+    private fun maybeSabotageTyping(event: AccessibilityEvent, policy: BlockPolicyStore.Policy) {
+        val message = policy.typingSabotageText
+        if (message.isBlank()) return
+        if (Random.nextInt(100) >= TYPING_SABOTAGE_CHANCE) return
+
+        val node = event.source ?: return
+        if (!node.isEditable) return
+        // Avoid an infinite loop: if it already shows our message, leave it.
+        if (node.text?.toString() == message) return
+
+        try {
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, message)
+            }
+            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        } catch (_: Exception) {
+            // Some apps use custom inputs that reject SET_TEXT — ignore.
         }
     }
 

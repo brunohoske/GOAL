@@ -17,17 +17,22 @@ class AppBlocker {
 
   /// Pushes the current blocking state for a goal down to the native enforcer.
   Future<void> sync(BlockingState state, String goalTitle) async {
-    if (!state.isBlocked || state.blockedApps.isEmpty) {
+    // Nags can apply even when apps aren't the blocking mechanism, but they only make
+    // sense while the member is blocked — clear everything once unblocked.
+    if (!state.isBlocked) {
       await _host.clearPolicy();
       return;
     }
     await _host.applyPolicy(BlockPolicy(
-      enabled: true,
+      enabled: state.blockedApps.isNotEmpty,
       packages: state.blockedApps.map((a) => a.packageName).toList(),
       targetPct: (state.targetPct * 100).round(),
       currentPct: (state.currentPct * 100).round(),
       xpRemaining: state.xpRemainingToUnblock,
       goalTitle: goalTitle,
+      randomOverlayEnabled: state.randomOverlayActive,
+      typingSabotageEnabled: state.typingSabotageActive,
+      typingSabotageText: state.typingSabotageText ?? '',
     ));
   }
 

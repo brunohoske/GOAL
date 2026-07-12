@@ -36,6 +36,9 @@ class BlockPolicy {
     required this.currentPct,
     required this.xpRemaining,
     required this.goalTitle,
+    required this.randomOverlayEnabled,
+    required this.typingSabotageEnabled,
+    required this.typingSabotageText,
   });
 
   bool enabled;
@@ -50,6 +53,13 @@ class BlockPolicy {
 
   String goalTitle;
 
+  /// Chaos-mode nags (already gated to blocked + day-window by the backend).
+  bool randomOverlayEnabled;
+
+  bool typingSabotageEnabled;
+
+  String typingSabotageText;
+
   Object encode() {
     return <Object?>[
       enabled,
@@ -58,6 +68,9 @@ class BlockPolicy {
       currentPct,
       xpRemaining,
       goalTitle,
+      randomOverlayEnabled,
+      typingSabotageEnabled,
+      typingSabotageText,
     ];
   }
 
@@ -70,6 +83,9 @@ class BlockPolicy {
       currentPct: result[3]! as int,
       xpRemaining: result[4]! as int,
       goalTitle: result[5]! as String,
+      randomOverlayEnabled: result[6]! as bool,
+      typingSabotageEnabled: result[7]! as bool,
+      typingSabotageText: result[8]! as String,
     );
   }
 }

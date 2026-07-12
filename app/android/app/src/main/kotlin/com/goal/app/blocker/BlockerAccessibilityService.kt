@@ -11,7 +11,7 @@ import kotlin.random.Random
  *  1. App blocking — a blocked app comes to the foreground (TYPE_WINDOW_STATE_CHANGED).
  *  2. Site blocking — a known browser shows a blocked domain in its URL bar
  *     (TYPE_WINDOW_CONTENT_CHANGED, throttled). Domains derive from the blocked packages.
- *  3. Typing sabotage (chaos mode) — while active, each text change in any app has a ~25%
+ *  3. Typing sabotage (chaos mode) — while active, each text change in any app has a ~7%
  *     chance of being replaced by the goal's custom message (TYPE_VIEW_TEXT_CHANGED).
  *
  * On a block hit it shows a full-screen overlay explaining why and sends the user home.
@@ -24,7 +24,7 @@ class BlockerAccessibilityService : AccessibilityService() {
         var onBlockedAppOpened: ((String) -> Unit)? = null
 
         private const val BROWSER_CHECK_INTERVAL_MS = 400L
-        private const val TYPING_SABOTAGE_CHANCE = 25 // percent, per text-change event
+        private const val TYPING_SABOTAGE_CHANCE = 7 // percent, per text-change event
     }
 
     private var lastBrowserCheckAt = 0L
@@ -80,7 +80,7 @@ class BlockerAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Chaos mode: on a random ~25% of keystrokes, replace the edited field's text with the
+     * Chaos mode: on a random ~7% of keystrokes, replace the edited field's text with the
      * goal's custom message (with {xp}/{nome} already resolved by the backend). Only touches
      * editable fields; the caret jumps to the end so the user keeps fighting it.
      */

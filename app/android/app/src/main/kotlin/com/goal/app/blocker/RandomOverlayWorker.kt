@@ -11,10 +11,12 @@ import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 /**
- * "Chaos mode" random overlay: roughly every 30 minutes there's a 35% chance the block overlay
- * pops up out of nowhere to remind the member how much XP they still owe. Only fires while the
- * policy still has the random-overlay nag active (the backend already gated it to blocked +
- * within the configured day window; the app pushes that down when it syncs).
+ * "Chaos mode" random overlay: on each tick there's a 35% chance the block overlay pops up out
+ * of nowhere to remind the member how much XP they still owe. We request a 10-minute period, but
+ * Android clamps periodic work to a 15-minute minimum, so in practice it fires roughly every
+ * 15 minutes. Only fires while the policy still has the random-overlay nag active (the backend
+ * already gated it to blocked + within the configured day window; the app pushes that down when
+ * it syncs).
  */
 class RandomOverlayWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
@@ -35,7 +37,7 @@ class RandomOverlayWorker(context: Context, params: WorkerParameters) : Worker(c
 object RandomOverlayScheduler {
     const val CHANCE_PERCENT = 35
     private const val WORK_NAME = "goal_random_overlay"
-    private const val INTERVAL_MINUTES = 30L
+    private const val INTERVAL_MINUTES = 10L
 
     /** Starts the periodic worker when the nag is on; cancels it when off. Idempotent. */
     fun sync(context: Context, enabled: Boolean) {

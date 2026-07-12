@@ -1,6 +1,7 @@
 package com.goal.app.blocker
 
 import android.content.Context
+import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -38,7 +39,7 @@ object RandomOverlayScheduler {
 
     /** Starts the periodic worker when the nag is on; cancels it when off. Idempotent. */
     fun sync(context: Context, enabled: Boolean) {
-        val wm = WorkManager.getInstance(context)
+        val wm = workManager(context)
         if (enabled) {
             val request = PeriodicWorkRequestBuilder<RandomOverlayWorker>(
                 INTERVAL_MINUTES, TimeUnit.MINUTES,
@@ -47,5 +48,16 @@ object RandomOverlayScheduler {
         } else {
             wm.cancelUniqueWork(WORK_NAME)
         }
+    }
+
+    /**
+     * We disabled WorkManager's automatic startup (it was crashing the app on launch), so we
+     * initialize it on demand here. initialize() throws if already initialized — hence the guard.
+     */
+    private fun workManager(context: Context): WorkManager {
+        if (!WorkManager.isInitialized()) {
+            WorkManager.initialize(context.applicationContext, Configuration.Builder().build())
+        }
+        return WorkManager.getInstance(context.applicationContext)
     }
 }

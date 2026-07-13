@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../design_system/components/goal_wordmark.dart';
 import '../../../design_system/theme/app_colors.dart';
 import '../../../design_system/theme/app_spacing.dart';
+import '../../blocking/domain/blockable_apps.dart';
 import '../data/goals_repository.dart';
 
 /// Create-goal wizard. This is where the goal's behaviour is configured (immutable after).
@@ -15,20 +16,8 @@ class CreateGoalScreen extends ConsumerStatefulWidget {
   ConsumerState<CreateGoalScreen> createState() => _CreateGoalScreenState();
 }
 
-/// A known social app the user can toggle for blocking.
-class _AppOption {
-  const _AppOption(this.pkg, this.name);
-  final String pkg;
-  final String name;
-}
-
-const _knownApps = [
-  _AppOption('com.instagram.android', 'Instagram'),
-  _AppOption('com.zhiliaoapp.musically', 'TikTok'),
-  _AppOption('com.twitter.android', 'X'),
-  _AppOption('com.facebook.katana', 'Facebook'),
-  _AppOption('com.google.android.youtube', 'YouTube'),
-];
+// Catalog of blockable apps lives in features/blocking/domain/blockable_apps.dart
+// (shared with the edit-goal sheet, which can add — but never remove — apps).
 
 class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   final _title = TextEditingController();
@@ -89,7 +78,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
           'typingSabotageEnabled': _typingEnabled,
           'typingSabotageDaysBefore': _typingDays,
           'typingSabotageText': _typingText.text.trim().isEmpty ? null : _typingText.text.trim(),
-          'blockedApps': _knownApps
+          'blockedApps': knownBlockableApps
               .where((a) => _blockedPkgs.contains(a.pkg))
               .map((a) => {'packageName': a.pkg, 'displayName': a.name})
               .toList(),
@@ -210,17 +199,31 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                 Wrap(
                   spacing: AppSpacing.sm,
                   runSpacing: AppSpacing.sm,
-                  children: _knownApps.map((a) {
+                  children: knownBlockableApps.map((a) {
                     final on = _blockedPkgs.contains(a.pkg);
                     return FilterChip(
                       label: Text(a.name),
                       selected: on,
-                      onSelected: (s) => setState(() => s ? _blockedPkgs.add(a.pkg) : _blockedPkgs.remove(a.pkg)),
+                      onSelected: (s) => setState(() {
+                        if (!s) {
+                          _blockedPkgs.remove(a.pkg);
+                          return;
+                        }
+                        _blockedPkgs.add(a.pkg);
+                        // Blocking all of YouTube already covers Shorts (and vice-versa).
+                        if (a.pkg == youtubePkg) _blockedPkgs.remove(youtubeShortsPkg);
+                        if (a.pkg == youtubeShortsPkg) _blockedPkgs.remove(youtubePkg);
+                      }),
                       selectedColor: AppColors.primaryContainer,
                       checkmarkColor: AppColors.primary,
                     );
                   }).toList(),
                 ),
+                if (_blockedPkgs.contains(youtubeShortsPkg)) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text('Vídeos normais liberados — só o player de Shorts é bloqueado, no app e no navegador.',
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
               ],
             ),
           ),

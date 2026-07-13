@@ -25,16 +25,23 @@ object BlockOverlay {
 
     /**
      * Shows the overlay. [force] bypasses the anti-flicker throttle — used by the random
-     * chaos-mode nag, which intentionally appears on its own schedule.
+     * chaos-mode nag, which intentionally appears on its own schedule. [title]/[message]
+     * default to the generic "you are blocked" copy; partial blocks (e.g. Shorts) customize them.
      */
-    fun show(context: Context, policy: BlockPolicyStore.Policy, force: Boolean = false) {
+    fun show(
+        context: Context,
+        policy: BlockPolicyStore.Policy,
+        force: Boolean = false,
+        title: String? = null,
+        message: String? = null,
+    ) {
         if (!canDrawOverlays(context)) return
         val now = System.currentTimeMillis()
         if (!force && now - shownAt < MIN_INTERVAL_MS) return
         shownAt = now
 
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val view = buildView(context, policy)
+        val view = buildView(context, policy, title, message)
 
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -58,7 +65,12 @@ object BlockOverlay {
         } catch (_: Exception) { /* overlay may fail if permission revoked mid-flight */ }
     }
 
-    private fun buildView(context: Context, policy: BlockPolicyStore.Policy): View {
+    private fun buildView(
+        context: Context,
+        policy: BlockPolicyStore.Policy,
+        customTitle: String?,
+        customMessage: String?,
+    ): View {
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -74,14 +86,15 @@ object BlockOverlay {
             gravity = Gravity.CENTER
         }
         val title = TextView(context).apply {
-            text = "Você está bloqueado"
+            text = customTitle ?: "Você está bloqueado"
             setTextColor(Color.parseColor("#1A1B25"))
             textSize = 22f
             gravity = Gravity.CENTER
             setPadding(0, 48, 0, 12)
         }
         val message = TextView(context).apply {
-            text = "Faltam ${policy.xpRemaining} XP para liberar seus apps em \"${policy.goalTitle}\"."
+            text = customMessage
+                ?: "Faltam ${policy.xpRemaining} XP para liberar seus apps em \"${policy.goalTitle}\"."
             setTextColor(Color.parseColor("#6B6E80"))
             textSize = 15f
             gravity = Gravity.CENTER

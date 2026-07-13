@@ -107,8 +107,12 @@ public class UpdateGoalHandler : IRequestHandler<UpdateGoalCommand, Result>
             {
                 var pkg = app.PackageName.Trim();
                 if (pkg.Length == 0 || !existing.Add(pkg)) continue;
-                goal.Settings.BlockedApps.Add(new GoalBlockedApp
+                // Add via the DbSet: ids are client-generated, so an entity merely discovered
+                // through the navigation would be tracked as Modified (UPDATE on a missing
+                // row → DbUpdateConcurrencyException) instead of inserted.
+                _db.GoalBlockedApps.Add(new GoalBlockedApp
                 {
+                    GoalSettingsId = goal.Settings.Id,
                     PackageName = pkg,
                     DisplayName = app.DisplayName.Trim(),
                 });

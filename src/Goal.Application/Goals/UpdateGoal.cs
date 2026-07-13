@@ -2,6 +2,7 @@ using FluentValidation;
 using Goal.Application.Abstractions;
 using Goal.Application.Common;
 using Goal.Domain.Common;
+using Goal.Domain.Goals;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,8 @@ namespace Goal.Application.Goals;
 ///   because sprint creation reads the settings at close time).
 /// - BaseXpTargetPerSprint (+ derived XP table): applies NOW — each member's base target is
 ///   updated in the current sprint while their EarnedXp and carried debt are preserved.
+/// - AddBlockedApps: ADD-ONLY. The blocklist can only get stricter after creation; there is
+///   deliberately no way to remove an app (members agreed to it when joining).
 /// </summary>
 public record UpdateGoalCommand(
     Guid GoalId,
@@ -27,7 +30,8 @@ public record UpdateGoalCommand(
     int? RandomOverlayDaysBefore = null,
     bool? TypingSabotageEnabled = null,
     int? TypingSabotageDaysBefore = null,
-    string? TypingSabotageText = null) : IRequest<Result>;
+    string? TypingSabotageText = null,
+    IReadOnlyList<BlockedAppDto>? AddBlockedApps = null) : IRequest<Result>;
 
 public class UpdateGoalValidator : AbstractValidator<UpdateGoalCommand>
 {
@@ -42,6 +46,11 @@ public class UpdateGoalValidator : AbstractValidator<UpdateGoalCommand>
         RuleFor(x => x.RandomOverlayDaysBefore!.Value).InclusiveBetween(0, 90).When(x => x.RandomOverlayDaysBefore.HasValue);
         RuleFor(x => x.TypingSabotageDaysBefore!.Value).InclusiveBetween(0, 90).When(x => x.TypingSabotageDaysBefore.HasValue);
         RuleFor(x => x.TypingSabotageText!).MaximumLength(280).When(x => x.TypingSabotageText is not null);
+        RuleForEach(x => x.AddBlockedApps).ChildRules(a =>
+        {
+            a.RuleFor(p => p.PackageName).NotEmpty();
+            a.RuleFor(p => p.DisplayName).NotEmpty();
+        }).When(x => x.AddBlockedApps is not null);
     }
 }
 
@@ -64,7 +73,8 @@ public class UpdateGoalHandler : IRequestHandler<UpdateGoalCommand, Result>
         if (actor is null || actor.Role != MemberRole.Admin)
             return Error.Forbidden("Somente o admin pode editar o GOAL.");
 
-        var goal = await _db.Goals.Include(g => g.Settings)
+        var goal = await _db.Goals
+            .Include(g => g.Settings).ThenInclude(s => s.BlockedApps)
             .FirstOrDefaultAsync(g => g.Id == cmd.GoalId && g.Status == GoalStatus.Active, ct);
         if (goal is null) return Error.NotFound("GOAL não encontrado.");
 
@@ -85,6 +95,25 @@ public class UpdateGoalHandler : IRequestHandler<UpdateGoalCommand, Result>
         if (cmd.TypingSabotageText is not null)
             goal.Settings.TypingSabotageText =
                 string.IsNullOrWhiteSpace(cmd.TypingSabotageText) ? null : cmd.TypingSabotageText.Trim();
+
+        // Add-only: the blocklist may only grow after creation (unique index on
+        // GoalSettingsId+PackageName backs the duplicate skip). No removal path exists.
+        if (cmd.AddBlockedApps is { Count: > 0 })
+        {
+            var existing = goal.Settings.BlockedApps
+                .Select(a => a.PackageName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var app in cmd.AddBlockedApps)
+            {
+                var pkg = app.PackageName.Trim();
+                if (pkg.Length == 0 || !existing.Add(pkg)) continue;
+                goal.Settings.BlockedApps.Add(new GoalBlockedApp
+                {
+                    PackageName = pkg,
+                    DisplayName = app.DisplayName.Trim(),
+                });
+            }
+        }
 
         // Applies now: rebase every member's target in the CURRENT sprint, preserving
         // earned XP and carried debt (effective target = new base + existing debt).

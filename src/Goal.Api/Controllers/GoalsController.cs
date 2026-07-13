@@ -27,7 +27,8 @@ public class GoalsController : ApiControllerBase
             goalId, body.Title, body.SprintDurationDays, body.BaseXpTargetPerSprint,
             body.XpScalableEasy, body.XpScalableMedium, body.XpScalableHard,
             body.RandomOverlayEnabled, body.RandomOverlayDaysBefore,
-            body.TypingSabotageEnabled, body.TypingSabotageDaysBefore, body.TypingSabotageText)));
+            body.TypingSabotageEnabled, body.TypingSabotageDaysBefore, body.TypingSabotageText,
+            body.AddBlockedApps)));
 
     /// <summary>Admin-only. Archives the goal; members are released automatically.</summary>
     [HttpDelete("{goalId:guid}")]
@@ -85,7 +86,8 @@ public record UpdateGoalBody(
     int? RandomOverlayDaysBefore,
     bool? TypingSabotageEnabled,
     int? TypingSabotageDaysBefore,
-    string? TypingSabotageText);
+    string? TypingSabotageText,
+    List<BlockedAppDto>? AddBlockedApps);
 
 /// <summary>Body for reviewing a proposed task (ids come from the route). Null fields keep the proposal's values.</summary>
 public record ReviewTaskBody(

@@ -10,6 +10,7 @@ import '../../../design_system/components/goal_progress_ring.dart';
 import '../../../design_system/components/status_chip.dart';
 import '../../../design_system/theme/app_colors.dart';
 import '../../../design_system/theme/app_spacing.dart';
+import '../../blocking/domain/blockable_apps.dart';
 import '../../blocking/presentation/blocking_sync.dart';
 import '../../tasks/domain/task_models.dart';
 import '../data/goals_repository.dart';
@@ -130,6 +131,16 @@ class GoalDetailScreen extends ConsumerWidget {
         text: (goal.settings.typingSabotageText as String?) ?? '{nome}, faltam {xp} XP. Larga o celular! 📵');
     bool saving = false;
 
+    // Blocklist is add-only: existing apps show locked; only missing ones can be added.
+    final alreadyBlocked =
+        {for (final a in goal.settings.blockedApps) a.packageName as String};
+    final Set<String> appsToAdd = {};
+    final addableApps = knownBlockableApps
+        .where((a) => !alreadyBlocked.contains(a.pkg))
+        // "Only Shorts" is pointless when the whole YouTube app is already blocked.
+        .where((a) => !(a.pkg == youtubeShortsPkg && alreadyBlocked.contains(youtubePkg)))
+        .toList();
+
     int xpMedium() => (xpTarget / tasksPerSprint).round().clamp(1, 100000);
     int xpEasy() => (xpMedium() / 2).round().clamp(1, 100000);
     int xpHard() => xpMedium() * 2;
@@ -219,6 +230,43 @@ class GoalDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ],
+              const Divider(height: AppSpacing.xl),
+              Text('Apps bloqueados', style: Theme.of(ctx).textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.xs),
+              Text('Dá pra adicionar novos, mas nunca remover — o bloqueio só aperta.',
+                  style: Theme.of(ctx).textTheme.bodySmall),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final a in goal.settings.blockedApps)
+                    FilterChip(
+                      label: Text(a.displayName as String),
+                      selected: true,
+                      onSelected: null, // locked: removal is not allowed
+                      selectedColor: AppColors.primaryContainer,
+                      checkmarkColor: AppColors.primary,
+                    ),
+                  for (final a in addableApps)
+                    FilterChip(
+                      label: Text(a.name),
+                      selected: appsToAdd.contains(a.pkg),
+                      onSelected: (s) => setSheet(() {
+                        if (!s) {
+                          appsToAdd.remove(a.pkg);
+                          return;
+                        }
+                        appsToAdd.add(a.pkg);
+                        // Blocking all of YouTube already covers Shorts (and vice-versa).
+                        if (a.pkg == youtubePkg) appsToAdd.remove(youtubeShortsPkg);
+                        if (a.pkg == youtubeShortsPkg) appsToAdd.remove(youtubePkg);
+                      }),
+                      selectedColor: AppColors.primaryContainer,
+                      checkmarkColor: AppColors.primary,
+                    ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.lg),
               FilledButton(
                 onPressed: saving
@@ -238,6 +286,11 @@ class GoalDetailScreen extends ConsumerWidget {
                             'typingSabotageEnabled': typingEnabled,
                             'typingSabotageDaysBefore': typingDays,
                             'typingSabotageText': typingCtrl.text.trim(),
+                            'addBlockedApps': [
+                              for (final a in knownBlockableApps)
+                                if (appsToAdd.contains(a.pkg))
+                                  {'packageName': a.pkg, 'displayName': a.name},
+                            ],
                           });
                           ref.invalidate(goalDetailProvider(goalId));
                           ref.invalidate(blockingStateProvider(goalId));
@@ -438,6 +491,7 @@ class _SprintTab extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(blockingStateProvider(goalId)),
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           blockingAsync.when(
@@ -616,14 +670,17 @@ class _TasksTab extends ConsumerWidget {
           final taskById = {for (final t in tasks) t.id: t};
 
           if (tasks.isEmpty) {
-            return const EmptyState(
-              icon: Icons.checklist,
-              title: 'Nenhuma tarefa no catálogo',
-              message: 'O admin cria as tarefas. Toque em "Nova tarefa".',
+            return const _ScrollableFill(
+              child: EmptyState(
+                icon: Icons.checklist,
+                title: 'Nenhuma tarefa no catálogo',
+                message: 'O admin cria as tarefas. Toque em "Nova tarefa".',
+              ),
             );
           }
 
           return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               if (assignments.isNotEmpty) ...[
@@ -909,6 +966,7 @@ class _RankingTab extends ConsumerWidget {
         data: (members) {
           final ranked = [...members]..sort((a, b) => b.earnedXp.compareTo(a.earnedXp));
           return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: ranked.length,
             separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
@@ -996,6 +1054,7 @@ class _TeamTab extends ConsumerWidget {
         data: (members) {
           final unassigned = assignments.where((a) => a.assignedToMemberId == null).toList();
           return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               ...members.map((m) => _MemberBoardCard(
@@ -1226,13 +1285,16 @@ class _ReviewTab extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              icon: Icons.how_to_vote_outlined,
-              title: 'Nada para revisar',
-              message: 'Quando seus amigos concluírem tarefas, elas aparecem aqui para você aprovar.',
+            return const _ScrollableFill(
+              child: EmptyState(
+                icon: Icons.how_to_vote_outlined,
+                title: 'Nada para revisar',
+                message: 'Quando seus amigos concluírem tarefas, elas aparecem aqui para você aprovar.',
+              ),
             );
           }
           return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: items.length,
             separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
@@ -1316,5 +1378,20 @@ class _CardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Card(
         child: SizedBox(height: 160, child: Center(child: CircularProgressIndicator())),
+      );
+}
+
+/// Makes non-scrollable content (empty states) participate in pull-to-refresh:
+/// RefreshIndicator only fires over an always-scrollable descendant filling the viewport.
+class _ScrollableFill extends StatelessWidget {
+  const _ScrollableFill({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, c) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(height: c.maxHeight, width: c.maxWidth, child: child),
+        ),
       );
 }

@@ -8,6 +8,9 @@ services:
       POSTGRES_DB: goal
       POSTGRES_USER: goal
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    ports:
+      # Loopback-only: reachable via SSH tunnel, never from the internet.
+      - "127.0.0.1:5433:5432"
     volumes:
       - goal_pgdata:/var/lib/postgresql/data
     healthcheck:
